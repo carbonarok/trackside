@@ -600,3 +600,32 @@ func (st *Store) loadRaw(ctx context.Context, ids []int64) (map[int64]*Service, 
 	}
 	return out, nil
 }
+
+// SearchServices finds trains on a run date by headcode (e.g. 2P47) or
+// train UID, in departure order.
+func (st *Store) SearchServices(ctx context.Context, q string, runDate time.Time, limit int) ([]*Service, error) {
+	q = strings.ToUpper(strings.TrimSpace(q))
+	rows, err := st.Pool.Query(ctx, `
+		SELECT sv.id FROM services sv JOIN schedules s ON s.id = sv.schedule_id
+		WHERE sv.run_date = $1 AND (s.signalling_id = $2 OR sv.train_uid = $2)
+		ORDER BY s.first_time NULLS LAST, sv.train_uid
+		LIMIT $3`, runDate, q, limit)
+	if err != nil {
+		return nil, err
+	}
+	ids, err := pgx.CollectRows(rows, pgx.RowTo[int64])
+	if err != nil {
+		return nil, err
+	}
+	services, err := st.load(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*Service, 0, len(ids))
+	for _, id := range ids {
+		if s := services[id]; s != nil {
+			out = append(out, s)
+		}
+	}
+	return out, nil
+}

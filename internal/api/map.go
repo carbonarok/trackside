@@ -1,25 +1,15 @@
 package api
 
 import (
-	_ "embed"
-	"html/template"
 	"net/http"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/carbonarok/trackside/internal/ukrail"
 )
 
-//go:embed map.html
-var mapPage string
-
-var mapTemplate = template.Must(template.New("map").Parse(mapPage))
-
 func (s *Server) registerMap(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v1/map/trains", s.mapTrains)
 	mux.HandleFunc("GET /v1/map/stations", s.mapStations)
-	mux.HandleFunc("GET /map", s.mapHTML)
 }
 
 // PointGeometry is a GeoJSON point: [longitude, latitude].
@@ -152,18 +142,4 @@ func (s *Server) mapStations(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	w.Header().Set("Content-Type", "application/geo+json")
 	writeJSON(w, out)
-}
-
-func (s *Server) mapHTML(w http.ResponseWriter, r *http.Request) {
-	tiles := os.Getenv("MAP_TILE_URL")
-	attribution := os.Getenv("MAP_TILE_ATTRIBUTION")
-	if tiles == "" {
-		tiles = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-		attribution = `&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors`
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	mapTemplate.Execute(w, map[string]any{
-		"TileURL":     tiles,
-		"Attribution": template.HTML(strings.TrimSpace(attribution)),
-	})
 }

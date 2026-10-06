@@ -35,6 +35,7 @@ import (
 	"github.com/carbonarok/trackside/internal/timetable"
 	"github.com/carbonarok/trackside/internal/trust"
 	"github.com/carbonarok/trackside/internal/ukrail"
+	"github.com/carbonarok/trackside/web"
 )
 
 const usage = `trackside: open UK rail timetable and live running API
@@ -404,6 +405,11 @@ func serve(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config) error {
 		}
 		fmt.Fprintln(w, "ok")
 	})
+	// The web frontend takes every path the API doesn't.
+	mux.Handle("GET /", web.Handler(web.Config{
+		TileURL:         os.Getenv("MAP_TILE_URL"),
+		TileAttribution: os.Getenv("MAP_TILE_ATTRIBUTION"),
+	}))
 
 	go every(ctx, time.Hour, "refresh services", func(ctx context.Context) error {
 		return schedule.RefreshServices(ctx, pool)

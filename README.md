@@ -44,6 +44,18 @@ own copy for free, with their own feed credentials.
 - **Two ways to connect:** each Network Rail feed can come from Network Rail's
   own STOMP service or from the Rail Data Marketplace's Kafka. Darwin comes
   from the Rail Data Marketplace.
+- **A website built in:** station boards, train pages with the route drawn
+  as a line diagram, a search that takes stations, headcodes or train IDs, a
+  live map of every train, and a Delay Repay checker. It is compiled into the
+  binary, so there's nothing extra to host. Open `http://localhost:8080/`.
+- **Live train map:** every running train, coloured by how late it is and
+  pointing the way it's going. Positions come from the last reported location
+  and the timetable, so trains between stations are estimates. Also available
+  as GeoJSON.
+- **History:** each day's actual times are kept (400 days by default), with
+  punctuality stats per station and per train.
+- **Delay Repay checker:** how late a journey arrived, which compensation
+  band that falls into, and the next train if yours was cancelled.
 - **Native JSON API** with ISO 8601 times and clear field names.
 - **Compatibility API** that copies the legacy Realtime Trains v1 JSON shape
   (`/api/v1/json/...`). An existing client can switch over by changing only its
@@ -247,10 +259,10 @@ docker compose run --rm trackside import-schedule
 docker compose run --rm trackside import-smart     # optional, for Train Describer
 ```
 
-Without Docker (Go 1.25+ and Postgres 14+):
+Without Docker (Go 1.25+, Node 22+ and Postgres 14+):
 
 ```bash
-go build ./cmd/trackside
+make build                  # builds the website, then the binary that embeds it
 createdb trackside
 cp .env.example .env        # set DATABASE_URL and the credentials
 ./trackside import-corpus
@@ -275,7 +287,7 @@ cp .env.example .env        # set DATABASE_URL and the credentials
 - Services are re-resolved hourly, so the 7-day window keeps rolling forward.
 - TRUST, Darwin and TD are followed live.
 
-**Check it works:**
+**Check it works:** open <http://localhost:8080/> for the website, or
 
 ```bash
 curl 'localhost:8080/v1/locations/CLJ/departures'
@@ -319,6 +331,9 @@ precedence over it.
 | `INBOX_INTERVAL` | `15m` | How often to check the inbox |
 | `NRE_LDBWS_TOKEN` | | Darwin Lite developer token (see [Darwin Lite](#alternative-darwin-lite)). Ignored when the Darwin Push Port is configured. |
 | `NRE_LDBWS_URL` | `https://lite.realtime.nationalrail.co.uk/OpenLDBWS/ldb12.asmx` | Darwin Lite endpoint |
+| `HISTORY_DAYS` | `400` | How many days of actual running to keep. `0` keeps it forever. |
+| `MAP_TILE_URL` | OpenStreetMap | Map tiles for the live map, as `https://.../{z}/{x}/{y}.png`. OpenStreetMap's own servers are fine for personal use; a public instance should use its own tiles or a tile provider. |
+| `MAP_TILE_ATTRIBUTION` | | Attribution shown with `MAP_TILE_URL`'s tiles (HTML) |
 | `LISTEN_ADDR` | `:8080` | |
 | `LOG_LEVEL` | `info` | `debug` logs every request |
 
@@ -348,7 +363,12 @@ TIPLOC (`CLPHMJN`). A CRS code covers every TIPLOC at that station.
 | `GET /v1/locations/{code}/departures` | Departure board |
 | `GET /v1/locations/{code}/arrivals` | Arrivals board |
 | `GET /v1/locations/{code}/messages` | Darwin station messages |
+| `GET /v1/services?q=1A23` | Find trains by headcode or train ID (`date` defaults to today) |
 | `GET /v1/services/{uid}/{YYYY-MM-DD}` | A service's full route with live times and Train Describer position |
+| `GET /v1/history/services/{uid}` | How a train has run on past days |
+| `GET /v1/stats/locations/{code}` | Punctuality at a station |
+| `GET /v1/delay-repay?from=BTN&to=VIC&date=…&departure=08:15` | How late a journey arrived, and its Delay Repay band |
+| `GET /v1/map/trains`, `GET /v1/map/stations` | Train positions and stations as GeoJSON |
 | `GET /healthz` | Liveness |
 | `GET /openapi.yaml`, `GET /docs` | API reference |
 
@@ -467,6 +487,12 @@ go test ./...                                   # unit tests
 TEST_DATABASE_URL=postgres://localhost/trackside_test go test ./...   # + end-to-end (wipes that DB)
 ```
 
+The website is a React app in [`web/`](web/). `make dev` runs it with hot
+reload on <http://localhost:5173>, talking to a trackside on :8080. `make
+build` builds it into `web/dist` and then builds the binary, which embeds it.
+A binary built without `make web` first still works, but `/` says the
+website is missing.
+
 A test checks that `openapi.yaml` and the response structs list exactly the
 same fields. If you change a response, update the spec too.
 
@@ -479,7 +505,9 @@ VSTP train. It then replays TRUST messages and checks both APIs.
 - [x] Darwin Push Port: forecasts, platforms, cancellations, reasons and names
 - [x] Rail Data Marketplace (Kafka) for all feeds
 - [x] Train Describer: TD-derived times, berth position and "at platform"
-- [ ] **Run against the live feeds** and fix whatever real data turns up
+- [x] **Run against the live feeds** and fix whatever real data turns up
+- [x] Website: boards, train pages, search, live map, Delay Repay checker
+- [ ] GTFS and GTFS-Realtime export
 - [x] Associations (joins, divides, next workings) from the timetable and Darwin
 - [x] Darwin station messages (`OW`)
 - [x] "Approaching" state from Train Describer

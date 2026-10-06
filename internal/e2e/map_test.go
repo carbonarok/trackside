@@ -46,12 +46,4 @@ func TestTrainMap(t *testing.T) {
 	if ct := resp.Header.Get("Content-Type"); ct != "application/geo+json" {
 		t.Errorf("content type = %q", ct)
 	}
-	page, err := http.Get(srv.URL + "/map")
-	if err != nil {
-		t.Fatal(err)
-	}
-	page.Body.Close()
-	if page.StatusCode != 200 {
-		t.Errorf("/map status %d", page.StatusCode)
-	}
 }

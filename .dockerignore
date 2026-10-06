@@ -1,0 +1,5 @@
+.env
+.git
+trackside
+web/node_modules
+web/dist

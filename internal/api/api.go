@@ -34,6 +34,7 @@ func (s *Server) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v1/locations/{code}/departures", s.board(false))
 	mux.HandleFunc("GET /v1/locations/{code}/arrivals", s.board(true))
 	mux.HandleFunc("GET /v1/locations/{code}/messages", s.messages)
+	mux.HandleFunc("GET /v1/services", s.searchServices)
 	mux.HandleFunc("GET /v1/services/{uid}/{date}", s.service)
 	s.registerHistory(mux)
 	s.registerMap(mux)
@@ -73,6 +74,33 @@ func (s *Server) searchLocations(w http.ResponseWriter, r *http.Request) {
 		out = append(out, toLocation(l))
 	}
 	writeJSON(w, map[string]any{"locations": out})
+}
+
+func (s *Server) searchServices(w http.ResponseWriter, r *http.Request) {
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	if len(q) < 2 {
+		writeError(w, http.StatusBadRequest, "q must be a headcode or train UID")
+		return
+	}
+	date := ukrail.DateOf(s.now())
+	if v := r.URL.Query().Get("date"); v != "" {
+		d, err := time.Parse(time.DateOnly, v)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "date must be YYYY-MM-DD")
+			return
+		}
+		date = d
+	}
+	services, err := s.Store.SearchServices(r.Context(), q, date, 50)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	out := make([]ServiceSummary, 0, len(services))
+	for _, svc := range services {
+		out = append(out, summary(svc))
+	}
+	writeJSON(w, map[string]any{"services": out})
 }
 
 func (s *Server) location(w http.ResponseWriter, r *http.Request) {

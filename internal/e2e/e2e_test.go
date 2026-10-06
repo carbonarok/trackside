@@ -174,6 +174,20 @@ func TestPipeline(t *testing.T) {
 		}
 	})
 
+	t.Run("search trains by headcode and UID", func(t *testing.T) {
+		var res struct {
+			Services []api.ServiceSummary `json:"services"`
+		}
+		get(t, srv, "/v1/services?q=1a04&date=2026-10-06", &res)
+		if len(res.Services) != 1 || res.Services[0].UID != "W10004" {
+			t.Errorf("headcode search = %+v", res.Services)
+		}
+		get(t, srv, "/v1/services?q=W10002&date=2026-10-06", &res)
+		if len(res.Services) != 1 || res.Services[0].Headcode != "2W99" {
+			t.Errorf("UID search = %+v", res.Services)
+		}
+	})
+
 	t.Run("passes only when asked", func(t *testing.T) {
 		var b board
 		get(t, srv, "/v1/locations/VXH/departures?at=2026-10-06T08:00&window=30", &b)

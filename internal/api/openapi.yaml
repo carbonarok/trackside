@@ -128,6 +128,27 @@ paths:
                     items: { $ref: "#/components/schemas/Message" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /v1/services:
+    get:
+      summary: Find trains by headcode or UID
+      operationId: searchServices
+      parameters:
+        - { name: q, in: query, required: true, description: "Headcode (e.g. 2P47) or train UID.", schema: { type: string, minLength: 2 } }
+        - { name: date, in: query, description: Run date; defaults to today., schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: Matching trains in departure order (at most 50).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [services]
+                properties:
+                  services:
+                    type: array
+                    items: { $ref: "#/components/schemas/ServiceSummary" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
   /v1/services/{uid}/{date}:
     get:
       summary: Service detail
