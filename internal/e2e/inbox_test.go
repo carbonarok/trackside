@@ -82,9 +82,12 @@ func TestInbox(t *testing.T) {
 	os.Mkdir(filepath.Join(dir, "PPTimetable"), 0o755)
 	copyFile(t, "../../testdata/darwin_ref.xml", filepath.Join(dir, "PPTimetable", "20261006020500_ref_v4.xml.gz"), true)
 	os.WriteFile(filepath.Join(dir, "PPTimetable", "20261006020500_ref_v2.xml.gz"), []byte("not gzip"), 0o644)
+	// An older publication delivered later must not win.
+	os.WriteFile(filepath.Join(dir, "PPTimetable", "20260930020500_ref_v4.xml.gz"), []byte("not gzip"), 0o644)
 	now := time.Now()
-	os.Chtimes(filepath.Join(dir, "PPTimetable", "20261006020500_ref_v2.xml.gz"), now, now)
 	os.Chtimes(filepath.Join(dir, "PPTimetable", "20261006020500_ref_v4.xml.gz"), now, now)
+	os.Chtimes(filepath.Join(dir, "PPTimetable", "20261006020500_ref_v2.xml.gz"), now, now)
+	os.Chtimes(filepath.Join(dir, "PPTimetable", "20260930020500_ref_v4.xml.gz"), now.Add(time.Minute), now.Add(time.Minute))
 	copyFile(t, "../../testdata/schedule_full.json", filepath.Join(dir, "CIF_ALL_FULL_DAILY_toc-full.json.gz"), true)
 	updateWithSequence(t, filepath.Join(dir, "CIF_ALL_UPDATE_DAILY_toc-update-mon.json"), 101)
 	os.WriteFile(filepath.Join(dir, "CIF_ALL_FULL_DAILY_toc-full.CIF.gz"), []byte("ignored"), 0o644)
@@ -126,16 +129,17 @@ func TestInbox(t *testing.T) {
 	if n := count(`SELECT count(*) FROM inbox_files WHERE name = 'PPTimetable/20261006020500_ref_v4.xml.gz' AND result = 'loaded'`); n != 1 {
 		t.Errorf("Darwin ref_v4 in a sub-folder was not the one loaded")
 	}
-	// Five loaded, plus the superseded ref_v2; CIF and unrelated files ignored.
-	if n := count(`SELECT count(*) FROM inbox_files`); n != 6 {
-		t.Errorf("recorded = %d, want 6", n)
+	// Five loaded, plus two superseded Darwin files; CIF and unrelated files
+	// ignored.
+	if n := count(`SELECT count(*) FROM inbox_files`); n != 7 {
+		t.Errorf("recorded = %d, want 7", n)
 	}
 
 	// A second poll finds nothing new.
 	if err := im.Poll(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if n := count(`SELECT count(*) FROM inbox_files`); n != 6 {
+	if n := count(`SELECT count(*) FROM inbox_files`); n != 7 {
 		t.Errorf("files reprocessed: %d records", n)
 	}
 
