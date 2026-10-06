@@ -89,7 +89,10 @@ func TestInbox(t *testing.T) {
 	os.Chtimes(filepath.Join(dir, "PPTimetable", "20261006020500_ref_v2.xml.gz"), now, now)
 	os.Chtimes(filepath.Join(dir, "PPTimetable", "20260930020500_ref_v4.xml.gz"), now.Add(time.Minute), now.Add(time.Minute))
 	copyFile(t, "../../testdata/schedule_full.json", filepath.Join(dir, "CIF_ALL_FULL_DAILY_toc-full.json.gz"), true)
-	updateWithSequence(t, filepath.Join(dir, "CIF_ALL_UPDATE_DAILY_toc-update-mon.json"), 101)
+	// Gzipped despite the name, as the marketplace sometimes delivers.
+	updateWithSequence(t, filepath.Join(dir, "update.tmp"), 101)
+	copyFile(t, filepath.Join(dir, "update.tmp"), filepath.Join(dir, "CIF_ALL_UPDATE_DAILY_toc-update-mon.json"), true)
+	os.Remove(filepath.Join(dir, "update.tmp"))
 	os.WriteFile(filepath.Join(dir, "CIF_ALL_FULL_DAILY_toc-full.CIF.gz"), []byte("ignored"), 0o644)
 	os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("ignored"), 0o644)
 

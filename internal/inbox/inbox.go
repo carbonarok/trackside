@@ -1,6 +1,7 @@
 package inbox
 
 import (
+	"bufio"
 	"compress/gzip"
 	"context"
 	"errors"
@@ -282,13 +283,20 @@ func currentSequence(ctx context.Context, pool *pgxpool.Pool) (int, error) {
 	return strconv.Atoi(v)
 }
 
-// open opens a file, decompressing .gz files.
+// open opens a file, decompressing it if it is gzipped. Compression is
+// detected from the content, not the name: the marketplace sometimes
+// delivers gzipped files without a .gz extension.
 func (im *Importer) open(ctx context.Context, name string) (io.ReadCloser, error) {
-	r, err := im.Source.Open(ctx, name)
+	f, err := im.Source.Open(ctx, name)
 	if err != nil {
 		return nil, err
 	}
-	if !strings.HasSuffix(strings.ToLower(name), ".gz") {
+	br := bufio.NewReader(f)
+	r := struct {
+		io.Reader
+		io.Closer
+	}{br, f}
+	if magic, _ := br.Peek(2); len(magic) < 2 || magic[0] != 0x1f || magic[1] != 0x8b {
 		return r, nil
 	}
 	gz, err := gzip.NewReader(r)
