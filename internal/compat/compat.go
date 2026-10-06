@@ -375,8 +375,11 @@ func locationDetail(svc *timetable.Service, i int) LocationDetail {
 		Path:              p.Path,
 		DisplayAs:         displayAs(svc, i),
 	}
-	if p.AtPlatform {
+	switch {
+	case p.AtPlatform:
 		d.ServiceLocation = "AT_PLAT"
+	case p.Approaching:
+		d.ServiceLocation = "APPR_STAT"
 	}
 	if p.WTTArr != nil {
 		d.WTTBookedArrival = ukrail.HHMMSS(*p.WTTArr)

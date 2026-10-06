@@ -64,8 +64,8 @@ func setup(t *testing.T) (*pgxpool.Pool, *httptest.Server) {
 	}
 	loadSchedule(t, pool, "../../testdata/schedule_full.json")
 
-	store := &timetable.Store{Pool: pool}
 	now := func() time.Time { return time.Date(2026, 10, 6, 8, 0, 0, 0, ukrail.London) }
+	store := &timetable.Store{Pool: pool, Now: now}
 	mux := http.NewServeMux()
 	(&api.Server{Store: store, Now: now}).Register(mux)
 	(&compat.Server{Store: store, Now: now}).Register(mux)
@@ -585,6 +585,24 @@ func TestPipeline(t *testing.T) {
 		if err := proc.ApplyFrame(ctx, []byte(frame)); err != nil {
 			t.Fatal(err)
 		}
+		// W10004 (1A04) steps into 0201, the berth before Wimbledon.
+		approach := `{"CA_MSG":{"msg_type":"CA","area_id":"WI","time":"` + utc(7, 45, 0) + `","from":"0199","to":"0201","descr":"1A04"}}`
+		if err := proc.ApplyFrame(ctx, []byte(approach)); err != nil {
+			t.Fatal(err)
+		}
+		var appr api.ServiceDetail
+		get(t, srv, "/v1/services/W10004/2026-10-06", &appr)
+		if !appr.Stops[2].Approaching || appr.Stops[2].AtPlatform {
+			t.Errorf("WIM should be approaching: %+v", appr.Stops[2])
+		}
+		var apprCompat struct {
+			Locations []compat.LocationDetail `json:"locations"`
+		}
+		get(t, srv, "/api/v1/json/service/W10004/2026/10/06", &apprCompat)
+		if got := apprCompat.Locations[2].ServiceLocation; got != "APPR_STAT" {
+			t.Errorf("compat approach = %q", got)
+		}
+
 		// Kafka record: W10004 (1A04) arrives at Wimbledon.
 		record := `{"CA_MSG":{"msg_type":"CA","area_id":"WI","time":"` + utc(7, 47, 15) + `","from":"0201","to":"0203","descr":"1A04"}}`
 		if err := proc.ApplyFrame(ctx, []byte(record)); err != nil {
@@ -602,7 +620,7 @@ func TestPipeline(t *testing.T) {
 
 		get(t, srv, "/v1/services/W10004/2026-10-06", &d)
 		wim := d.Stops[2]
-		if wim.Arrival.Actual == nil || wim.Arrival.Actual.Format("15:04:05") != "08:47:00" || !wim.AtPlatform {
+		if wim.Arrival.Actual == nil || wim.Arrival.Actual.Format("15:04:05") != "08:47:00" || !wim.AtPlatform || wim.Approaching {
 			t.Errorf("WIM = %+v atPlatform=%v", wim.Arrival, wim.AtPlatform)
 		}
 		var svc struct {

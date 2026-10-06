@@ -102,14 +102,18 @@ type Map struct {
 	between map[[3]string][]Berth // td, from, to: step types B and D
 	from    map[[2]string][]Berth // td, from: F (any step out) and C (clearout)
 	to      map[[2]string][]Berth // td, to: T (any step in) and I (interpose)
+	// approach maps a berth to the STANOXes a train in it is approaching:
+	// the berths that arrival steps start from.
+	approach map[[2]string][]string
 }
 
 // NewMap builds a lookup index.
 func NewMap(berths []Berth) *Map {
 	m := &Map{
-		between: map[[3]string][]Berth{},
-		from:    map[[2]string][]Berth{},
-		to:      map[[2]string][]Berth{},
+		between:  map[[3]string][]Berth{},
+		from:     map[[2]string][]Berth{},
+		to:       map[[2]string][]Berth{},
+		approach: map[[2]string][]string{},
 	}
 	for _, b := range berths {
 		switch b.StepType {
@@ -120,6 +124,12 @@ func NewMap(berths []Berth) *Map {
 		default:
 			k := [3]string{b.TD, b.FromBerth, b.ToBerth}
 			m.between[k] = append(m.between[k], b)
+		}
+		if b.IsArrival() && (b.StepType == "B" || b.StepType == "F") && b.FromBerth != "" {
+			k := [2]string{b.TD, b.FromBerth}
+			if !contains(m.approach[k], b.STANOX) {
+				m.approach[k] = append(m.approach[k], b.STANOX)
+			}
 		}
 	}
 	return m
@@ -140,6 +150,20 @@ func (m *Map) Step(td, from, to string) []Berth {
 		}
 	}
 	return out
+}
+
+// Approaching returns the STANOXes a train entering berth is approaching.
+func (m *Map) Approaching(td, berth string) []string {
+	return m.approach[[2]string{td, berth}]
+}
+
+func contains(list []string, s string) bool {
+	for _, v := range list {
+		if v == s {
+			return true
+		}
+	}
+	return false
 }
 
 // Cancel returns records triggered by a berth cancel (CB).

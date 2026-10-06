@@ -29,6 +29,33 @@ func (s *Service) annotate() {
 	s.applyPosition()
 }
 
+// approachExpiry is how long a TD approach stays believable without the
+// arrival being reported.
+const approachExpiry = 20 * time.Minute
+
+// applyApproach marks the stop TD says the train is approaching: the first
+// stop at that TIPLOC after the last reported event, if the train has not
+// arrived there yet.
+func (s *Service) applyApproach(now time.Time) {
+	if s.TDApproachTIPLOC == "" || s.TDApproachAt == nil || now.Sub(*s.TDApproachAt) > approachExpiry {
+		return
+	}
+	start := 0
+	for i := range s.Stops {
+		p := &s.Stops[i]
+		if p.ActualArr != nil || p.ActualDep != nil || p.ActualPass != nil {
+			start = i + 1
+		}
+	}
+	for i := start; i < len(s.Stops); i++ {
+		p := &s.Stops[i]
+		if p.Location.TIPLOC == s.TDApproachTIPLOC {
+			p.Approaching = !p.Cancelled()
+			return
+		}
+	}
+}
+
 // applyPosition marks the stop the train is standing at: the latest stop
 // with an arrival but no departure, before its destination.
 func (s *Service) applyPosition() {

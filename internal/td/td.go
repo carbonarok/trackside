@@ -67,12 +67,22 @@ func (p *Processor) ApplyFrame(ctx context.Context, body []byte) error {
 			default:
 				continue
 			}
-			if len(berths) == 0 || !headcode.MatchString(m.Descr) {
+			var approaching []string
+			if kind == "CA_MSG" || kind == "CC_MSG" {
+				approaching = p.Map.Approaching(m.AreaID, m.To)
+			}
+			if (len(berths) == 0 && len(approaching) == 0) || !headcode.MatchString(m.Descr) {
 				continue
 			}
 			at, err := msgTime(m.Time)
 			if err != nil {
 				continue
+			}
+			for _, stanox := range approaching {
+				err := p.approach(ctx, m.Descr, m.AreaID, m.To, at, stanox)
+				if err != nil && !errors.Is(err, errNoMatch) {
+					slog.Warn("td approach failed", "area", m.AreaID, "descr", m.Descr, "err", err)
+				}
 			}
 			berth := m.To
 			if kind == "CB_MSG" {
@@ -112,10 +122,10 @@ func (p *Processor) now() time.Time {
 	return time.Now()
 }
 
-// apply attaches an event to the service carrying the headcode at the SMART
-// location whose working time is closest to the event.
-func (p *Processor) apply(ctx context.Context, descr, area, berth string, stepAt time.Time, b Berth) error {
-	at := stepAt.Add(time.Duration(b.Offset) * time.Second)
+// match finds the service carrying the headcode at the STANOX whose working
+// time there is closest to at, along with the event (arr, dep or pass) the
+// time corresponds to.
+func (p *Processor) match(ctx context.Context, descr, stanox string, at time.Time, arrival bool) (*cand, string, error) {
 	today := ukrail.DateOf(p.now())
 	rows, err := p.Pool.Query(ctx, `
 		SELECT sv.id, sv.run_date, sv.trust_id IS NOT NULL, sl.seq, sl.tiploc, sl.wtt_arr, sl.wtt_dep, sl.wtt_pass
@@ -125,17 +135,9 @@ func (p *Processor) apply(ctx context.Context, descr, area, berth string, stepAt
 		JOIN locations l ON l.tiploc = sl.tiploc
 		WHERE s.signalling_id = $1 AND l.stanox = $2
 		  AND sv.run_date BETWEEN $3::date - 1 AND $3::date
-		  AND NOT sv.planned_cancel`, descr, b.STANOX, today)
+		  AND NOT sv.planned_cancel`, descr, stanox, today)
 	if err != nil {
-		return err
-	}
-	type cand struct {
-		id             int64
-		runDate        time.Time
-		activated      bool
-		seq            int
-		tiploc         string
-		arr, dep, pass *int
+		return nil, "", err
 	}
 	cands, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (cand, error) {
 		var c cand
@@ -143,7 +145,7 @@ func (p *Processor) apply(ctx context.Context, descr, area, berth string, stepAt
 		return c, err
 	})
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 
 	var best *cand
@@ -154,7 +156,7 @@ func (p *Processor) apply(ctx context.Context, descr, area, berth string, stepAt
 		event, wtt := "pass", c.pass
 		if wtt == nil {
 			event, wtt = "dep", c.dep
-			if b.IsArrival() || wtt == nil {
+			if arrival || wtt == nil {
 				event, wtt = "arr", c.arr
 			}
 		}
@@ -175,7 +177,27 @@ func (p *Processor) apply(ctx context.Context, descr, area, berth string, stepAt
 		}
 	}
 	if best == nil {
-		return errNoMatch
+		return nil, "", errNoMatch
+	}
+	return best, bestEvent, nil
+}
+
+type cand struct {
+	id             int64
+	runDate        time.Time
+	activated      bool
+	seq            int
+	tiploc         string
+	arr, dep, pass *int
+}
+
+// apply attaches an event to the service carrying the headcode at the SMART
+// location whose working time is closest to the event.
+func (p *Processor) apply(ctx context.Context, descr, area, berth string, stepAt time.Time, b Berth) error {
+	at := stepAt.Add(time.Duration(b.Offset) * time.Second)
+	best, bestEvent, err := p.match(ctx, descr, b.STANOX, at, b.IsArrival())
+	if err != nil {
+		return err
 	}
 	batch := &pgx.Batch{}
 	// TRUST and Darwin remain authoritative: a TD time never overwrites one.
@@ -184,7 +206,27 @@ func (p *Processor) apply(ctx context.Context, descr, area, berth string, stepAt
 		best.id, best.seq, best.tiploc, bestEvent, at, nullEmpty(b.Platform))
 	batch.Queue(`UPDATE services SET td_area = $2, td_berth = $3, td_berth_at = $4 WHERE id = $1`,
 		best.id, area, berth, stepAt)
+	if bestEvent != "dep" {
+		// The train has reached the location, so it is no longer approaching.
+		batch.Queue(`UPDATE services SET td_approach_tiploc = NULL WHERE id = $1 AND td_approach_tiploc = $2`,
+			best.id, best.tiploc)
+	}
 	return p.Pool.SendBatch(ctx, batch).Close()
+}
+
+// approach records that a train has entered the berth before a station.
+func (p *Processor) approach(ctx context.Context, descr, area, berth string, stepAt time.Time, stanox string) error {
+	best, event, err := p.match(ctx, descr, stanox, stepAt, true)
+	if err != nil {
+		return err
+	}
+	if event == "pass" {
+		return nil // only calls are announced as approaching
+	}
+	_, err = p.Pool.Exec(ctx, `UPDATE services SET td_area = $2, td_berth = $3, td_berth_at = $4,
+		td_approach_tiploc = $5, td_approach_at = $4 WHERE id = $1`,
+		best.id, area, berth, stepAt, best.tiploc)
+	return err
 }
 
 func nullEmpty(s string) any {

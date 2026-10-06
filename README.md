@@ -40,7 +40,7 @@ own copy for free, with their own feed credentials.
   shown on station screens, attached to every board.
 - **Train Describer positions:** signalling berth steps are mapped to arrivals
   and departures with the SMART data, giving times ahead of TRUST, the train's
-  current berth, and "at platform" status.
+  current berth, and "approaching" and "at platform" status.
 - **Two ways to connect:** each Network Rail feed can come from Network Rail's
   own STOMP service or from the Rail Data Marketplace's Kafka. Darwin comes
   from the Rail Data Marketplace.
@@ -279,7 +279,7 @@ Each stop has `arrival`, `departure` or `pass` times. Each of those carries
 `public` (timetable), `working` (internal schedule), `actual` (reported by
 TRUST, Darwin or TD), `estimated` (Darwin's forecast, or projected from the
 latest delay), `delayMinutes` and `delayed` (late by an unknown amount). Stops
-also report `atPlatform`, and platforms carry `confirmed`. Services include
+also report `approaching` and `atPlatform`, and platforms carry `confirmed`. Services include
 `lateReason` and `cancelReason` text when Darwin gives them. A cancelled
 service also gets `cancelReasonCode`, the TRUST delay attribution code (for
 example `IA`), and `cancelReasonCodeDescription`, the industry description of
@@ -313,7 +313,9 @@ Known differences from the original:
   `{type, associatedUid, associatedRunDate}` with types `divide`, `join`,
   `next`, `prev` and `linked`. The legacy layout wasn't documented, so this is
   a best guess.
-- `serviceLocation` only reports `AT_PLAT`, not the approach states.
+- `serviceLocation` reports `APPR_STAT` and `AT_PLAT`. It doesn't report
+  `APPR_PLAT`, `DEP_PREP` or `DEP_READY`, which need signalling data trackside
+  doesn't decode.
 - Cancellation reason text comes from Darwin. Without Darwin it falls back to
   the industry description of the TRUST delay code, which is less
   passenger-friendly.
@@ -356,6 +358,9 @@ data or services and only copies the JSON layout so clients can migrate.
   stop.
 - **TD steps** are matched to a service by headcode, the SMART location and
   the nearest working time, preferring trains TRUST has activated.
+- **Approaching** means the train has stepped into the berth that a SMART
+  arrival step starts from. It clears when the arrival is reported, or after
+  20 minutes without one.
 
 ## Development
 
@@ -376,7 +381,7 @@ VSTP train. It then replays TRUST messages and checks both APIs.
 - [ ] **Run against the live feeds** and fix whatever real data turns up
 - [x] Associations (joins, divides, next workings) from the timetable and Darwin
 - [x] Darwin station messages (`OW`)
-- [ ] "Approaching" states from TD berth offsets
+- [x] "Approaching" state from Train Describer
 - [x] Cancellation reason text from the delay attribution codes when there's
   no Darwin
 - [ ] OpenAPI spec, rate limiting and response caching for public instances.

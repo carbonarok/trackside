@@ -189,6 +189,7 @@ type Stop struct {
 	Cancelled      bool      `json:"cancelled"`
 	StartsHere     bool      `json:"startsHere,omitempty"`
 	AtPlatform     bool      `json:"atPlatform,omitempty"`
+	Approaching    bool      `json:"approaching,omitempty"`
 	TerminatesHere bool      `json:"terminatesHere,omitempty"`
 	Line           string    `json:"line,omitempty"`
 	Path           string    `json:"path,omitempty"`
@@ -431,6 +432,7 @@ func stop(svc *timetable.Service, i int) Stop {
 		Cancelled:      p.Cancelled(),
 		StartsHere:     p.StartsHere,
 		AtPlatform:     p.AtPlatform,
+		Approaching:    p.Approaching,
 		TerminatesHere: p.TerminatesHere,
 		Line:           p.Line,
 		Path:           p.Path,

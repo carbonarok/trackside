@@ -21,6 +21,15 @@ var ErrNotFound = errors.New("not found")
 // Store runs timetable queries.
 type Store struct {
 	Pool *pgxpool.Pool
+	// Now is the clock used to expire stale live state; tests override it.
+	Now func() time.Time
+}
+
+func (st *Store) now() time.Time {
+	if st.Now != nil {
+		return st.Now()
+	}
+	return time.Now()
 }
 
 // Location is a timetable location.
@@ -60,7 +69,10 @@ type Service struct {
 	// Last Train Describer berth the train was seen in.
 	TDArea, TDBerth string
 	TDBerthAt       *time.Time
-	Stops           []Stop
+	// TDApproachTIPLOC is the location TD last saw the train approaching.
+	TDApproachTIPLOC string
+	TDApproachAt     *time.Time
+	Stops            []Stop
 }
 
 // Stop is one location on a service's route.
@@ -98,6 +110,8 @@ type Stop struct {
 	PlatformSuppressed bool
 	// AtPlatform means the train has arrived here and not yet departed.
 	AtPlatform bool
+	// Approaching means TD has the train in the berth before this location.
+	Approaching bool
 }
 
 // DarwinForecast is Darwin's live view of one stop.
@@ -371,7 +385,8 @@ func (st *Store) load(ctx context.Context, ids []int64) (map[int64]*Service, err
 		       sv.activated_at, COALESCE(sv.cancel_stanox, ''), COALESCE(sv.cancel_type, ''),
 		       COALESCE(sv.cancel_reason, ''), COALESCE(sv.origin_stanox, ''),
 		       COALESCE(o.name, ''), COALESCE(sv.darwin_rid, ''), COALESCE(lr.text, ''), COALESCE(cr.text, ''),
-		       COALESCE(sv.td_area, ''), COALESCE(sv.td_berth, ''), sv.td_berth_at
+		       COALESCE(sv.td_area, ''), COALESCE(sv.td_berth, ''), sv.td_berth_at,
+		       COALESCE(sv.td_approach_tiploc, ''), sv.td_approach_at
 		FROM services sv JOIN schedules s ON s.id = sv.schedule_id
 		LEFT JOIN operators o ON o.code = s.atoc_code
 		LEFT JOIN darwin_reasons lr ON lr.kind = 'late' AND lr.code = sv.darwin_late_code
@@ -386,7 +401,7 @@ func (st *Store) load(ctx context.Context, ids []int64) (map[int64]*Service, err
 			&s.Category, &s.PowerType, &s.TrainClass, &s.Source, &s.STP, &s.PlannedCancel, &s.TrustID,
 			&s.ActivatedAt, &s.CancelSTANOX, &s.CancelType, &s.CancelReason, &s.OriginSTANOX,
 			&s.OperatorName, &s.DarwinRID, &s.LateReasonText, &s.CancelReasonText,
-			&s.TDArea, &s.TDBerth, &s.TDBerthAt); err != nil {
+			&s.TDArea, &s.TDBerth, &s.TDBerthAt, &s.TDApproachTIPLOC, &s.TDApproachAt); err != nil {
 			return nil, err
 		}
 		out[s.ID] = s
@@ -523,8 +538,10 @@ func (st *Store) load(ctx context.Context, ids []int64) (map[int64]*Service, err
 			s.Stops[i].Darwin = f.d
 		}
 	}
+	now := st.now()
 	for _, s := range out {
 		s.annotate()
+		s.applyApproach(now)
 	}
 	return out, nil
 }
