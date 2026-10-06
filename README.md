@@ -318,6 +318,11 @@ data or services and only copies the JSON layout so clients can migrate.
   train UID and date, the lowest STP indicator wins (C < N < O < P), and a
   VSTP schedule beats a CIF one on a tie. A winning cancellation keeps the
   schedule it cancels, so the train can be shown as cancelled.
+- **Bank holidays need no special handling.** `CIF_bank_holiday_running` only
+  adds the "BHX" symbol to printed timetables. The real bank holiday changes
+  are published as STP overlays and cancellations, which the rule above
+  already applies. trackside deliberately ignores the flag, because acting on
+  it would remove trains that do run.
 - **TRUST** movements are matched to a stop by STANOX and planned time.
   Most TRUST timestamps are UK local time encoded as if it were UTC, and are
   decoded that way. Activations take their run date from
@@ -352,7 +357,6 @@ VSTP train. It then replays TRUST messages and checks both APIs.
 - [ ] "Approaching" states from TD berth offsets
 - [ ] Cancellation reason text from the delay attribution codes when there's
   no Darwin
-- [ ] Bank holiday running restrictions (`CIF_bank_holiday_running`).
 - [ ] OpenAPI spec, rate limiting and response caching for public instances.
 
 ## Data licences and attribution

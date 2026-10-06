@@ -20,7 +20,9 @@ const ServiceWindowDays = 7
 // is the more recent. A winning C (STP cancellation) keeps the schedule it
 // cancels so the cancelled train can still be shown.
 //
-// Bank holiday running restrictions are not applied yet.
+// CIF_bank_holiday_running is deliberately ignored: it only marks printed
+// timetables, and real bank holiday changes arrive as STP overlays and
+// cancellations, which this rule already handles.
 const resolveSQL = `
 WITH days AS (
     SELECT d::date AS run_date FROM generate_series($1::date, $2::date, '1 day') d
