@@ -1,3 +1,4 @@
 /trackside
 *.gz
 .env
+.claude/
