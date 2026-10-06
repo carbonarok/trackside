@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/carbonarok/trackside/internal/db"
 	"github.com/carbonarok/trackside/internal/inbox"
@@ -76,7 +77,14 @@ func TestInbox(t *testing.T) {
 	dir := t.TempDir()
 	copyFile(t, "../../testdata/corpus.json", filepath.Join(dir, "CORPUSExtract.json"), false)
 	copyFile(t, "../../testdata/smart.json", filepath.Join(dir, "SMARTExtract.json.gz"), true)
-	copyFile(t, "../../testdata/darwin_ref.xml", filepath.Join(dir, "20261006020500_ref_v4.xml.gz"), true)
+	// Darwin delivers into its own folder, with several versions of each
+	// reference file; the newest version must win.
+	os.Mkdir(filepath.Join(dir, "PPTimetable"), 0o755)
+	copyFile(t, "../../testdata/darwin_ref.xml", filepath.Join(dir, "PPTimetable", "20261006020500_ref_v4.xml.gz"), true)
+	os.WriteFile(filepath.Join(dir, "PPTimetable", "20261006020500_ref_v2.xml.gz"), []byte("not gzip"), 0o644)
+	now := time.Now()
+	os.Chtimes(filepath.Join(dir, "PPTimetable", "20261006020500_ref_v2.xml.gz"), now, now)
+	os.Chtimes(filepath.Join(dir, "PPTimetable", "20261006020500_ref_v4.xml.gz"), now, now)
 	copyFile(t, "../../testdata/schedule_full.json", filepath.Join(dir, "CIF_ALL_FULL_DAILY_toc-full.json.gz"), true)
 	updateWithSequence(t, filepath.Join(dir, "CIF_ALL_UPDATE_DAILY_toc-update-mon.json"), 101)
 	os.WriteFile(filepath.Join(dir, "CIF_ALL_FULL_DAILY_toc-full.CIF.gz"), []byte("ignored"), 0o644)
@@ -115,15 +123,19 @@ func TestInbox(t *testing.T) {
 	if n := count(`SELECT count(*) FROM inbox_files WHERE result = 'loaded'`); n != 5 {
 		t.Errorf("loaded files = %d, want 5", n)
 	}
-	if n := count(`SELECT count(*) FROM inbox_files`); n != 5 {
-		t.Errorf("CIF and unrelated files should be ignored, recorded = %d", n)
+	if n := count(`SELECT count(*) FROM inbox_files WHERE name = 'PPTimetable/20261006020500_ref_v4.xml.gz' AND result = 'loaded'`); n != 1 {
+		t.Errorf("Darwin ref_v4 in a sub-folder was not the one loaded")
+	}
+	// Five loaded, plus the superseded ref_v2; CIF and unrelated files ignored.
+	if n := count(`SELECT count(*) FROM inbox_files`); n != 6 {
+		t.Errorf("recorded = %d, want 6", n)
 	}
 
 	// A second poll finds nothing new.
 	if err := im.Poll(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if n := count(`SELECT count(*) FROM inbox_files`); n != 5 {
+	if n := count(`SELECT count(*) FROM inbox_files`); n != 6 {
 		t.Errorf("files reprocessed: %d records", n)
 	}
 

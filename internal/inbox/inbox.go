@@ -96,7 +96,15 @@ func (im *Importer) Poll(ctx context.Context) error {
 		if len(files) == 0 {
 			continue
 		}
-		sort.Slice(files, func(i, j int) bool { return files[i].Modified.Before(files[j].Modified) })
+		// Newest last. Darwin publishes its reference data in several
+		// versions at once (_ref_v2, _v3, _v4), so on a tie the name, which
+		// carries the version, decides.
+		sort.Slice(files, func(i, j int) bool {
+			if !files[i].Modified.Equal(files[j].Modified) {
+				return files[i].Modified.Before(files[j].Modified)
+			}
+			return files[i].Name < files[j].Name
+		})
 		newest := files[len(files)-1]
 		im.record(ctx, newest, im.importReference(ctx, newest))
 		for _, f := range files[:len(files)-1] {

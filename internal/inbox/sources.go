@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -38,29 +39,46 @@ type Dir struct {
 
 func (d Dir) String() string { return d.Path }
 
-// List returns the files directly in the folder.
+// List returns the files in the folder and its sub-folders (the marketplace
+// delivers some products, such as Darwin's, into their own folder). Hidden
+// files and folders are skipped. Names are relative to the folder.
 func (d Dir) List(ctx context.Context) ([]Object, error) {
-	entries, err := os.ReadDir(d.Path)
-	if err != nil {
-		return nil, err
-	}
 	var out []Object
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
+	err := filepath.WalkDir(d.Path, func(p string, e fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if strings.HasPrefix(e.Name(), ".") && p != d.Path {
+			if e.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if e.IsDir() || !e.Type().IsRegular() {
+			return nil
 		}
 		info, err := e.Info()
 		if err != nil {
-			continue
+			return nil
 		}
-		out = append(out, Object{Name: e.Name(), Size: info.Size(), Modified: info.ModTime().UTC().Truncate(time.Second)})
-	}
-	return out, nil
+		rel, err := filepath.Rel(d.Path, p)
+		if err != nil {
+			return nil
+		}
+		out = append(out, Object{Name: filepath.ToSlash(rel), Size: info.Size(),
+			Modified: info.ModTime().UTC().Truncate(time.Second)})
+		return nil
+	})
+	return out, err
 }
 
-// Open opens a file in the folder.
+// Open opens a file in the folder. Names that would escape it are refused.
 func (d Dir) Open(ctx context.Context, name string) (io.ReadCloser, error) {
-	return os.Open(filepath.Join(d.Path, filepath.Base(name)))
+	p := filepath.Join(d.Path, filepath.FromSlash(name))
+	if rel, err := filepath.Rel(d.Path, p); err != nil || strings.HasPrefix(rel, "..") {
+		return nil, fmt.Errorf("inbox: %q is outside %s", name, d.Path)
+	}
+	return os.Open(p)
 }
 
 // Bucket is a Google Cloud Storage or Amazon S3 bucket, read through the S3
