@@ -305,6 +305,7 @@ func serve(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config) error {
 	mux := http.NewServeMux()
 	(&api.Server{Store: store}).Register(mux)
 	(&compat.Server{Store: store}).Register(mux)
+	api.RegisterDocs(mux)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		if err := pool.Ping(r.Context()); err != nil {
 			http.Error(w, "database unavailable", http.StatusServiceUnavailable)

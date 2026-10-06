@@ -244,6 +244,10 @@ station.
 
 ## API
 
+The full reference is an OpenAPI 3.1 spec served at `/openapi.yaml`, and
+rendered at `/docs` on any running instance. The source is
+[`internal/api/openapi.yaml`](internal/api/openapi.yaml).
+
 All times are UK local time in RFC 3339 format, for example
 `2026-10-06T08:07:00+01:00`. Locations can be given by CRS code (`CLJ`) or by
 TIPLOC (`CLPHMJN`). A CRS code covers every TIPLOC at that station.
@@ -257,6 +261,7 @@ TIPLOC (`CLPHMJN`). A CRS code covers every TIPLOC at that station.
 | `GET /v1/locations/{code}/messages` | Darwin station messages |
 | `GET /v1/services/{uid}/{YYYY-MM-DD}` | A service's full route with live times and Train Describer position |
 | `GET /healthz` | Liveness |
+| `GET /openapi.yaml`, `GET /docs` | API reference |
 
 Board parameters:
 
@@ -369,6 +374,9 @@ go test ./...                                   # unit tests
 TEST_DATABASE_URL=postgres://localhost/trackside_test go test ./...   # + end-to-end (wipes that DB)
 ```
 
+A test checks that `openapi.yaml` and the response structs list exactly the
+same fields. If you change a response, update the spec too.
+
 The end-to-end test loads a small hand-written timetable from `testdata/`. It
 covers overlays, a cancellation, a train past midnight, a daily update and a
 VSTP train. It then replays TRUST messages and checks both APIs.
@@ -384,7 +392,8 @@ VSTP train. It then replays TRUST messages and checks both APIs.
 - [x] "Approaching" state from Train Describer
 - [x] Cancellation reason text from the delay attribution codes when there's
   no Darwin
-- [ ] OpenAPI spec, rate limiting and response caching for public instances.
+- [x] OpenAPI spec and docs page
+- [ ] Rate limiting and response caching for public instances
 
 ## Data licences and attribution
 

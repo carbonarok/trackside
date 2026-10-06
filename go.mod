@@ -6,6 +6,7 @@ require (
 	github.com/go-stomp/stomp/v3 v3.1.5
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/twmb/franz-go v1.21.2
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (

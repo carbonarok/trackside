@@ -1,0 +1,377 @@
+openapi: 3.1.0
+info:
+  title: trackside
+  version: "0.1"
+  summary: Open UK train times from public rail data feeds.
+  description: |
+    Timetable, live running and forecasts for Great Britain's railway, built
+    from Network Rail and National Rail (Darwin) open data.
+
+    All times are UK local time in RFC 3339 format, for example
+    `2026-10-06T08:07:00+01:00`. Locations are given by CRS code (`CLJ`) or
+    TIPLOC (`CLPHMJN`); a CRS covers every TIPLOC at the station.
+
+    Contains public sector information licensed under the Open Government
+    Licence v3.0. Darwin data powered by National Rail Enquiries.
+  license:
+    name: AGPL-3.0-only
+    identifier: AGPL-3.0-only
+
+paths:
+  /v1/locations:
+    get:
+      summary: Search locations
+      operationId: searchLocations
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Name, CRS or TIPLOC; at least 2 characters.
+          schema: { type: string, minLength: 2 }
+      responses:
+        "200":
+          description: Matching locations, stations first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [locations]
+                properties:
+                  locations:
+                    type: array
+                    items: { $ref: "#/components/schemas/Location" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /v1/locations/{code}:
+    get:
+      summary: Get a location and its TIPLOCs
+      operationId: getLocation
+      parameters:
+        - $ref: "#/components/parameters/LocationCode"
+      responses:
+        "200":
+          description: The location.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [location, tiplocs]
+                properties:
+                  location: { $ref: "#/components/schemas/Location" }
+                  tiplocs:
+                    type: array
+                    items: { type: string }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/locations/{code}/departures:
+    get:
+      summary: Departure board
+      operationId: getDepartures
+      parameters:
+        - $ref: "#/components/parameters/LocationCode"
+        - $ref: "#/components/parameters/At"
+        - $ref: "#/components/parameters/Window"
+        - $ref: "#/components/parameters/Passes"
+        - name: to
+          in: query
+          description: Only trains that call at this location later (CRS or TIPLOC).
+          schema: { type: string }
+      responses:
+        "200":
+          description: Trains departing in the window, in time order.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Board" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/locations/{code}/arrivals:
+    get:
+      summary: Arrivals board
+      operationId: getArrivals
+      parameters:
+        - $ref: "#/components/parameters/LocationCode"
+        - $ref: "#/components/parameters/At"
+        - $ref: "#/components/parameters/Window"
+        - $ref: "#/components/parameters/Passes"
+        - name: from
+          in: query
+          description: Only trains that called at this location earlier (CRS or TIPLOC).
+          schema: { type: string }
+      responses:
+        "200":
+          description: Trains arriving in the window, in time order.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Board" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/locations/{code}/messages:
+    get:
+      summary: Station messages
+      operationId: getStationMessages
+      parameters:
+        - $ref: "#/components/parameters/LocationCode"
+      responses:
+        "200":
+          description: Darwin station messages, most severe first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [location, messages]
+                properties:
+                  location: { $ref: "#/components/schemas/Location" }
+                  messages:
+                    type: array
+                    items: { $ref: "#/components/schemas/Message" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/services/{uid}/{date}:
+    get:
+      summary: Service detail
+      description: A train's full route with live times, position and associations.
+      operationId: getService
+      parameters:
+        - name: uid
+          in: path
+          required: true
+          description: Train UID, e.g. W10001.
+          schema: { type: string }
+        - name: date
+          in: path
+          required: true
+          description: Run date (the date the train starts).
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: The service.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ServiceDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /healthz:
+    get:
+      summary: Liveness check
+      operationId: health
+      responses:
+        "200":
+          description: The server and its database are up.
+          content:
+            text/plain:
+              schema: { type: string }
+        "503":
+          description: The database is unavailable.
+
+components:
+  parameters:
+    LocationCode:
+      name: code
+      in: path
+      required: true
+      description: CRS (e.g. CLJ) or TIPLOC (e.g. CLPHMJN).
+      schema: { type: string }
+    At:
+      name: at
+      in: query
+      description: Start of the window, RFC 3339 or YYYY-MM-DDTHH:MM (UK time). Defaults to now.
+      schema: { type: string }
+    Window:
+      name: window
+      in: query
+      description: Window length in minutes.
+      schema: { type: integer, minimum: 1, maximum: 1440, default: 120 }
+    Passes:
+      name: passes
+      in: query
+      description: Include trains passing without stopping.
+      schema: { type: boolean, default: false }
+
+  responses:
+    BadRequest:
+      description: Invalid parameters.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Unknown location or service.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+
+    Location:
+      type: object
+      required: [tiploc, name]
+      properties:
+        tiploc: { type: string, example: CLPHMJN }
+        crs: { type: string, example: CLJ }
+        name: { type: string, example: Clapham Junction }
+
+    Operator:
+      type: object
+      required: [code, name]
+      properties:
+        code: { type: string, example: SW }
+        name: { type: string, example: South Western Railway }
+
+    Endpoint:
+      description: A service's origin or destination.
+      allOf:
+        - $ref: "#/components/schemas/Location"
+        - type: object
+          properties:
+            time:
+              type: string
+              format: date-time
+              description: Public departure (origin) or arrival (destination) time, or the working time if not public.
+
+    Times:
+      type: object
+      description: Planned and live times for one event at a stop.
+      properties:
+        public: { type: string, format: date-time, description: Timetabled public time. }
+        working: { type: string, format: date-time, description: Working timetable time. }
+        actual: { type: string, format: date-time, description: Reported by TRUST, Darwin or Train Describer. }
+        estimated: { type: string, format: date-time, description: Darwin's forecast, or projected from the latest delay. }
+        delayMinutes: { type: integer, description: Actual or estimated time minus the public (else working) time. }
+        delayed: { type: boolean, description: Late by an amount not yet known. }
+        cancelled: { type: boolean }
+
+    Platform:
+      type: object
+      description: Omitted entirely while Darwin has the platform suppressed.
+      required: [changed, confirmed]
+      properties:
+        planned: { type: string }
+        actual: { type: string, description: Live platform from Darwin, TRUST or TD. }
+        changed: { type: boolean }
+        confirmed: { type: boolean }
+
+    Stop:
+      allOf:
+        - $ref: "#/components/schemas/Location"
+        - type: object
+          required: [kind, cancelled]
+          properties:
+            kind:
+              type: string
+              enum: [origin, call, pass, destination, stop]
+              description: "`stop` is a call that is not in the public timetable."
+            arrival: { $ref: "#/components/schemas/Times" }
+            departure: { $ref: "#/components/schemas/Times" }
+            pass: { $ref: "#/components/schemas/Times" }
+            platform: { $ref: "#/components/schemas/Platform" }
+            cancelled: { type: boolean }
+            startsHere: { type: boolean, description: First stop served after a change of origin. }
+            atPlatform: { type: boolean, description: Arrived and not yet departed. }
+            approaching: { type: boolean, description: Train Describer has the train in the berth before this location. }
+            terminatesHere: { type: boolean, description: Last stop served after a part cancellation. }
+            line: { type: string }
+            path: { type: string }
+
+    ServiceSummary:
+      type: object
+      required: [uid, runDate, isPassenger, status, origin, destination, plannedCancel]
+      properties:
+        uid: { type: string, example: W10001 }
+        runDate: { type: string, format: date }
+        headcode: { type: string, example: 1A01 }
+        operator: { $ref: "#/components/schemas/Operator" }
+        isPassenger: { type: boolean }
+        status:
+          type: string
+          enum: [scheduled, activated, running, terminated, cancelled, partially_cancelled]
+        origin:
+          type: array
+          items: { $ref: "#/components/schemas/Endpoint" }
+        destination:
+          type: array
+          items: { $ref: "#/components/schemas/Endpoint" }
+        cancelReasonCode: { type: string, description: TRUST delay attribution code, e.g. IA. }
+        cancelReasonCodeDescription: { type: string, description: Industry description of cancelReasonCode. }
+        cancelReason: { type: string, description: Darwin's passenger-facing cancellation reason. }
+        lateReason: { type: string, description: Darwin's passenger-facing delay reason. }
+        plannedCancel: { type: boolean, description: Cancelled in the timetable (STP cancellation). }
+
+    BoardService:
+      allOf:
+        - $ref: "#/components/schemas/ServiceSummary"
+        - type: object
+          required: [stop]
+          properties:
+            stop: { $ref: "#/components/schemas/Stop" }
+
+    Message:
+      type: object
+      required: [id, category, severity, text, html, updatedAt]
+      properties:
+        id: { type: integer }
+        category: { type: string, enum: [Train, Station, Connections, System, Misc, PriorTrains, PriorOther] }
+        severity: { type: integer, minimum: 0, maximum: 3, description: 0 information to 3 severe. }
+        text: { type: string }
+        html: { type: string, description: "Simple HTML: p and a elements only." }
+        updatedAt: { type: string, format: date-time }
+
+    Board:
+      type: object
+      required: [location, from, to, messages, services]
+      properties:
+        location: { $ref: "#/components/schemas/Location" }
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time }
+        messages:
+          type: array
+          items: { $ref: "#/components/schemas/Message" }
+        services:
+          type: array
+          items: { $ref: "#/components/schemas/BoardService" }
+
+    Position:
+      type: object
+      description: The last Train Describer berth the train occupied.
+      required: [tdArea, berth, at]
+      properties:
+        tdArea: { type: string }
+        berth: { type: string }
+        at: { type: string, format: date-time }
+
+    Association:
+      type: object
+      required: [type, category, location, cancelled, service]
+      properties:
+        type:
+          type: string
+          enum: [divides, divided_from, joined_by, joins, forms, formed_from, linked, associated]
+          description: The link from this service's point of view.
+        category: { type: string, enum: [JJ, VV, NP, LK], description: "JJ join, VV divide, NP next working, LK linked." }
+        location: { $ref: "#/components/schemas/Location" }
+        cancelled: { type: boolean }
+        service: { $ref: "#/components/schemas/ServiceSummary" }
+
+    ServiceDetail:
+      allOf:
+        - $ref: "#/components/schemas/ServiceSummary"
+        - type: object
+          required: [source, stops]
+          properties:
+            trainClass: { type: string }
+            powerType: { type: string }
+            category: { type: string, description: CIF train category, e.g. OO. }
+            source: { type: string, enum: [timetable, vstp] }
+            position: { $ref: "#/components/schemas/Position" }
+            associations:
+              type: array
+              items: { $ref: "#/components/schemas/Association" }
+            stops:
+              type: array
+              items: { $ref: "#/components/schemas/Stop" }
