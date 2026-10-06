@@ -94,6 +94,8 @@ func TestSpecMatchesResponses(t *testing.T) {
 		"TrainRef": TrainRef{}, "DelayRepay": DelayRepay{}, "Compensation": Compensation{},
 		"HistoricCall": HistoricCall{}, "ServiceRun": ServiceRun{}, "ServiceHistory": ServiceHistory{},
 		"Punctuality": Punctuality{}, "LateTrain": LateTrain{}, "StationStats": StationStats{},
+		"PointGeometry": PointGeometry{}, "TrainPosition": TrainPosition{}, "TrainFeature": TrainFeature{},
+		"TrainMap": TrainMap{}, "StationFeature": StationFeature{}, "StationMap": StationMap{},
 	} {
 		sc, ok := s.Components.Schemas[name]
 		if !ok {
@@ -124,6 +126,7 @@ func TestSpecCoversRoutes(t *testing.T) {
 		"/v1/locations", "/v1/locations/{code}", "/v1/locations/{code}/departures",
 		"/v1/locations/{code}/arrivals", "/v1/locations/{code}/messages", "/v1/services/{uid}/{date}",
 		"/v1/delay-repay", "/v1/history/services/{uid}", "/v1/stats/locations/{code}",
+		"/v1/map/trains", "/v1/map/stations",
 	} {
 		if _, ok := s.Paths[route]; !ok {
 			t.Errorf("route %s not in openapi.yaml", route)

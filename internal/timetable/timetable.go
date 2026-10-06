@@ -26,6 +26,8 @@ type Store struct {
 	// Live optionally supplies on-demand live data (Darwin Lite) for boards
 	// and service detail. Data already held from the Darwin stream wins.
 	Live LiveSource
+
+	positions positionCache
 }
 
 func (st *Store) now() time.Time {
@@ -41,6 +43,8 @@ type Location struct {
 	CRS    string
 	STANOX string
 	Name   string
+	// Lat and Lon are set for stations (from NaPTAN).
+	Lat, Lon *float64
 }
 
 // Service is a train on a run date with its full route.
@@ -466,7 +470,7 @@ func (st *Store) loadRaw(ctx context.Context, ids []int64) (map[int64]*Service, 
 
 	rows, err = st.Pool.Query(ctx, `
 		SELECT sv.id, sl.seq, sl.tiploc, COALESCE(l.crs, ''), COALESCE(l.stanox, ''),
-		       COALESCE(l.name, initcap(l.tps_description), sl.tiploc), sl.loc_type,
+		       COALESCE(l.name, initcap(l.tps_description), sl.tiploc), l.lat, l.lon, sl.loc_type,
 		       sl.wtt_arr, sl.wtt_dep, sl.wtt_pass, sl.gbtt_arr, sl.gbtt_dep,
 		       COALESCE(sl.platform, ''), COALESCE(sl.line, ''), COALESCE(sl.path, '')
 		FROM services sv
@@ -481,7 +485,7 @@ func (st *Store) loadRaw(ctx context.Context, ids []int64) (map[int64]*Service, 
 		var id int64
 		var p Stop
 		if err := rows.Scan(&id, &p.Seq, &p.Location.TIPLOC, &p.Location.CRS, &p.Location.STANOX,
-			&p.Location.Name, &p.Type, &p.WTTArr, &p.WTTDep, &p.WTTPass, &p.GBTTArr, &p.GBTTDep,
+			&p.Location.Name, &p.Location.Lat, &p.Location.Lon, &p.Type, &p.WTTArr, &p.WTTDep, &p.WTTPass, &p.GBTTArr, &p.GBTTDep,
 			&p.Platform, &p.Line, &p.Path); err != nil {
 			return nil, err
 		}

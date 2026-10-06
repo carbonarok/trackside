@@ -36,6 +36,7 @@ func (s *Server) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v1/locations/{code}/messages", s.messages)
 	mux.HandleFunc("GET /v1/services/{uid}/{date}", s.service)
 	s.registerHistory(mux)
+	s.registerMap(mux)
 }
 
 func (s *Server) now() time.Time {
@@ -516,7 +517,9 @@ func parseLocal(v string) (time.Time, error) {
 }
 
 func writeJSON(w http.ResponseWriter, v any) {
-	w.Header().Set("Content-Type", "application/json")
+	if w.Header().Get("Content-Type") == "" {
+		w.Header().Set("Content-Type", "application/json")
+	}
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(v); err != nil {
 		slog.Warn("write response", "err", err)

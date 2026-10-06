@@ -188,10 +188,11 @@ func insertSchedules(ctx context.Context, tx pgx.Tx, batch []*Schedule, replace 
 	schedRows := make([][]any, len(batch))
 	var locRows [][]any
 	for i, s := range batch {
+		first, last := span(s.Locations)
 		schedRows[i] = []any{ids[i], s.TrainUID, s.StartDate, s.EndDate, s.DaysRuns, s.STP, s.Source,
 			nullStr(s.BankHolidayRunning), nullStr(s.TrainStatus), nullStr(s.SignallingID),
 			nullStr(s.Category), nullStr(s.PowerType), nullStr(s.TrainClass), s.Speed,
-			nullStr(s.ATOCCode), nullStr(s.ServiceCode)}
+			nullStr(s.ATOCCode), nullStr(s.ServiceCode), first, last}
 		for _, l := range s.Locations {
 			locRows = append(locRows, []any{ids[i], l.Seq, l.TIPLOC, l.Type, l.WTTArr, l.WTTDep,
 				l.WTTPass, l.GBTTArr, l.GBTTDep, nullStr(l.Platform), nullStr(l.Line), nullStr(l.Path)})
@@ -200,7 +201,7 @@ func insertSchedules(ctx context.Context, tx pgx.Tx, batch []*Schedule, replace 
 	if _, err := tx.CopyFrom(ctx, pgx.Identifier{"schedules"},
 		[]string{"id", "train_uid", "start_date", "end_date", "days_runs", "stp", "source",
 			"bank_holiday_running", "train_status", "signalling_id", "category", "power_type",
-			"train_class", "speed", "atoc_code", "service_code"},
+			"train_class", "speed", "atoc_code", "service_code", "first_time", "last_time"},
 		pgx.CopyFromRows(schedRows)); err != nil {
 		return fmt.Errorf("copy schedules: %w", err)
 	}
@@ -228,6 +229,27 @@ func queueAssociation(b *pgx.Batch, a *Association) {
 func queueDeleteAssociation(b *pgx.Batch, a *Association) {
 	b.Queue(`DELETE FROM associations WHERE main_uid = $1 AND assoc_uid = $2 AND start_date = $3
 		AND tiploc = $4 AND stp = $5`, a.MainUID, a.AssocUID, a.StartDate, a.TIPLOC, a.STP)
+}
+
+// span returns a schedule's first and last working times, nil when it has
+// no locations (an STP cancellation).
+func span(locs []Location) (first, last *int) {
+	for _, l := range locs {
+		for _, t := range []*int{l.WTTDep, l.WTTPass, l.WTTArr} {
+			if t == nil {
+				continue
+			}
+			if first == nil || *t < *first {
+				v := *t
+				first = &v
+			}
+			if last == nil || *t > *last {
+				v := *t
+				last = &v
+			}
+		}
+	}
+	return first, last
 }
 
 func deleteSchedule(ctx context.Context, tx pgx.Tx, k Key) error {

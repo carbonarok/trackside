@@ -208,6 +208,36 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /v1/map/trains:
+    get:
+      summary: Live train positions (GeoJSON)
+      description: |
+        Where every running train is estimated to be, as a GeoJSON
+        FeatureCollection. Trains standing at a station are placed there;
+        otherwise along the straight line between the stations either side,
+        in proportion to the time between them (actual, forecast or booked
+        times, in that order). Cached for 15 seconds. A map is served at /map.
+      operationId: getTrainMap
+      parameters:
+        - { name: all, in: query, description: Include freight and empty stock., schema: { type: boolean, default: false } }
+      responses:
+        "200":
+          description: Train positions.
+          content:
+            application/geo+json:
+              schema: { $ref: "#/components/schemas/TrainMap" }
+
+  /v1/map/stations:
+    get:
+      summary: Stations (GeoJSON)
+      operationId: getStationMap
+      responses:
+        "200":
+          description: Every station with coordinates.
+          content:
+            application/geo+json:
+              schema: { $ref: "#/components/schemas/StationMap" }
+
   /healthz:
     get:
       summary: Liveness check
@@ -539,3 +569,72 @@ components:
         mostLate:
           type: array
           items: { $ref: "#/components/schemas/LateTrain" }
+
+    PointGeometry:
+      type: object
+      required: [type, coordinates]
+      properties:
+        type: { type: string, enum: [Point] }
+        coordinates:
+          type: array
+          description: "[longitude, latitude]"
+          minItems: 2
+          maxItems: 2
+          items: { type: number }
+
+    TrainPosition:
+      type: object
+      required: [uid, runDate, origin, destination, atStation, bearing, live, isPassenger]
+      properties:
+        uid: { type: string }
+        runDate: { type: string, format: date }
+        headcode: { type: string }
+        operator: { $ref: "#/components/schemas/Operator" }
+        origin: { type: string }
+        destination: { type: string }
+        last:
+          $ref: "#/components/schemas/Location"
+          description: The station the train is at or has just left.
+        next:
+          $ref: "#/components/schemas/Location"
+          description: The station the train is heading for.
+        atStation: { type: boolean }
+        bearing: { type: number, description: Direction of travel in degrees from north. }
+        delayMinutes: { type: integer, description: Lateness at the last reported event. }
+        live: { type: boolean, description: False when the position comes from the timetable alone. }
+        isPassenger: { type: boolean }
+
+    TrainFeature:
+      type: object
+      required: [type, geometry, properties]
+      properties:
+        type: { type: string, enum: [Feature] }
+        geometry: { $ref: "#/components/schemas/PointGeometry" }
+        properties: { $ref: "#/components/schemas/TrainPosition" }
+
+    TrainMap:
+      type: object
+      required: [type, generatedAt, features]
+      properties:
+        type: { type: string, enum: [FeatureCollection] }
+        generatedAt: { type: string, format: date-time }
+        features:
+          type: array
+          items: { $ref: "#/components/schemas/TrainFeature" }
+
+    StationFeature:
+      type: object
+      required: [type, geometry, properties]
+      properties:
+        type: { type: string, enum: [Feature] }
+        geometry: { $ref: "#/components/schemas/PointGeometry" }
+        properties: { $ref: "#/components/schemas/Location" }
+
+    StationMap:
+      type: object
+      required: [type, features]
+      properties:
+        type: { type: string, enum: [FeatureCollection] }
+        features:
+          type: array
+          items: { $ref: "#/components/schemas/StationFeature" }
