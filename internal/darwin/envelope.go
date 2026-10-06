@@ -72,6 +72,20 @@ type jUpdate struct {
 	Deactivated  many[struct {
 		RID string `json:"rid"`
 	}] `json:"deactivated"`
+	Associations many[jAssociation] `json:"association"`
+}
+
+type jAssociation struct {
+	TIPLOC    string `json:"tiploc"`
+	Category  string `json:"category"`
+	Cancelled flag   `json:"isCancelled"`
+	Deleted   flag   `json:"isDeleted"`
+	Main      struct {
+		RID string `json:"rid"`
+	} `json:"main"`
+	Assoc struct {
+		RID string `json:"rid"`
+	} `json:"assoc"`
 }
 
 type jTrainStatus struct {
@@ -257,6 +271,13 @@ func (u *jUpdate) convert() *Update {
 			}
 		}
 		out.Schedules = append(out.Schedules, sch)
+	}
+	for _, a := range u.Associations {
+		var as Association
+		as.TIPLOC, as.Category = a.TIPLOC, a.Category
+		as.Cancelled, as.Deleted = bool(a.Cancelled), bool(a.Deleted)
+		as.Main.RID, as.Assoc.RID = a.Main.RID, a.Assoc.RID
+		out.Associations = append(out.Associations, as)
 	}
 	for _, d := range u.Deactivated {
 		out.Deactivated = append(out.Deactivated, struct {

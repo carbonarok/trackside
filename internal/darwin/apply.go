@@ -41,6 +41,11 @@ func (a *Applier) ApplyMessage(ctx context.Context, body []byte) error {
 				slog.Warn("darwin schedule failed", "rid", u.Schedules[i].RID, "err", err)
 			}
 		}
+		for i := range u.Associations {
+			if err := a.applyAssociation(ctx, &u.Associations[i]); err != nil {
+				slog.Warn("darwin association failed", "main", u.Associations[i].Main.RID, "err", err)
+			}
+		}
 	}
 	return nil
 }
@@ -248,6 +253,27 @@ func (a *Applier) applySchedule(ctx context.Context, s *Schedule) error {
 				updated_at = now()`, svc.id, st.seq, st.tiploc, loc.Can)
 	}
 	return a.Pool.SendBatch(ctx, batch).Close()
+}
+
+// applyAssociation stores a live association. It is keyed by RIDs, which
+// are resolved to services when read, since the trains' own messages may
+// not have arrived yet.
+func (a *Applier) applyAssociation(ctx context.Context, as *Association) error {
+	if as.Main.RID == "" || as.Assoc.RID == "" || as.TIPLOC == "" {
+		return nil
+	}
+	if as.Deleted {
+		_, err := a.Pool.Exec(ctx, `DELETE FROM darwin_associations
+			WHERE main_rid = $1 AND assoc_rid = $2 AND tiploc = $3 AND category = $4`,
+			as.Main.RID, as.Assoc.RID, as.TIPLOC, as.Category)
+		return err
+	}
+	_, err := a.Pool.Exec(ctx, `INSERT INTO darwin_associations (main_rid, assoc_rid, tiploc, category, cancelled)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (main_rid, assoc_rid, tiploc, category) DO UPDATE
+			SET cancelled = EXCLUDED.cancelled, updated_at = now()`,
+		as.Main.RID, as.Assoc.RID, as.TIPLOC, as.Category, as.Cancelled)
+	return err
 }
 
 func firstNonNil(vs ...*int) *int {

@@ -380,6 +380,63 @@ func TestPipeline(t *testing.T) {
 		}
 	})
 
+	t.Run("associations from the timetable and Darwin", func(t *testing.T) {
+		var d api.ServiceDetail
+		get(t, srv, "/v1/services/W10001/2026-10-06", &d)
+		if len(d.Associations) != 1 {
+			t.Fatalf("W10001 associations = %+v", d.Associations)
+		}
+		a := d.Associations[0]
+		if a.Type != "divides" || a.Location.Name != "Wimbledon" || a.Service.UID != "W10005" ||
+			a.Service.Destination[0].Name != "Woking" {
+			t.Errorf("divide = %+v", a)
+		}
+		get(t, srv, "/v1/services/W10005/2026-10-06", &d)
+		if len(d.Associations) != 1 || d.Associations[0].Type != "divided_from" || d.Associations[0].Service.UID != "W10001" {
+			t.Errorf("W10005 associations = %+v", d.Associations)
+		}
+		var monday api.ServiceDetail
+		get(t, srv, "/v1/services/W10001/2026-10-05", &monday)
+		if len(monday.Associations) != 0 {
+			t.Errorf("STP-cancelled divide still shown on 5 Oct: %+v", monday.Associations)
+		}
+
+		// Next working across midnight: W10002 (6 Oct) forms W10006 (7 Oct).
+		get(t, srv, "/v1/services/W10006/2026-10-07", &d)
+		if len(d.Associations) != 1 || d.Associations[0].Type != "formed_from" ||
+			d.Associations[0].Service.RunDate != "2026-10-06" {
+			t.Errorf("W10006 associations = %+v", d.Associations)
+		}
+
+		var svc struct {
+			Locations []compat.LocationDetail `json:"locations"`
+		}
+		get(t, srv, "/api/v1/json/service/W10001/2026/10/06", &svc)
+		if as := svc.Locations[3].Associations; len(as) != 1 || as[0].Type != "divide" || as[0].AssociatedUID != "W10005" {
+			t.Errorf("compat associations at WIM = %+v", as)
+		}
+
+		// Darwin cancels the timetabled next working and adds a link.
+		body, err := os.ReadFile("../../testdata/darwin_association.xml")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := (&darwin.Applier{Pool: pool}).ApplyMessage(ctx, body); err != nil {
+			t.Fatal(err)
+		}
+		get(t, srv, "/v1/services/W10004/2026-10-06", &d)
+		got := map[string]api.Association{}
+		for _, a := range d.Associations {
+			got[a.Type] = a
+		}
+		if f, ok := got["forms"]; !ok || !f.Cancelled || f.Service.UID != "W10002" {
+			t.Errorf("Darwin cancellation of next working = %+v", d.Associations)
+		}
+		if l, ok := got["linked"]; !ok || l.Location.TIPLOC != "CLPHMJN" {
+			t.Errorf("Darwin-only association = %+v", d.Associations)
+		}
+	})
+
 	t.Run("CORPUS reload keeps Darwin names", func(t *testing.T) {
 		f, _ := os.Open("../../testdata/corpus.json")
 		entries, err := corpus.Parse(f)

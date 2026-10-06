@@ -165,9 +165,25 @@ func (s *Server) service(w http.ResponseWriter, r *http.Request) {
 		lookupError(w, err)
 		return
 	}
+	assocs, err := s.Store.Associations(r.Context(), svc)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
 	locations := make([]LocationDetail, 0, len(svc.Stops))
 	for i := range svc.Stops {
-		locations = append(locations, locationDetail(svc, i))
+		d := locationDetail(svc, i)
+		for _, a := range assocs {
+			if a.Location.TIPLOC != d.TIPLOC || a.Cancelled {
+				continue
+			}
+			d.Associations = append(d.Associations, compatAssociation{
+				Type:              compatAssociationTypes[a.Type],
+				AssociatedUID:     a.OtherUID,
+				AssociatedRunDate: a.OtherRunDate.Format(time.DateOnly),
+			})
+		}
+		locations = append(locations, d)
 	}
 	var origin, destination []Pair
 	if n := len(svc.Stops); n > 0 {
@@ -261,11 +277,31 @@ type LocationDetail struct {
 	Line              string `json:"line,omitempty"`
 	Path              string `json:"path,omitempty"`
 
-	DisplayAs             string `json:"displayAs"`
-	ServiceLocation       string `json:"serviceLocation,omitempty"`
-	CancelReasonCode      string `json:"cancelReasonCode,omitempty"`
-	CancelReasonShortText string `json:"cancelReasonShortText,omitempty"`
-	CancelReasonLongText  string `json:"cancelReasonLongText,omitempty"`
+	DisplayAs             string              `json:"displayAs"`
+	Associations          []compatAssociation `json:"associations,omitempty"`
+	ServiceLocation       string              `json:"serviceLocation,omitempty"`
+	CancelReasonCode      string              `json:"cancelReasonCode,omitempty"`
+	CancelReasonShortText string              `json:"cancelReasonShortText,omitempty"`
+	CancelReasonLongText  string              `json:"cancelReasonLongText,omitempty"`
+}
+
+type compatAssociation struct {
+	Type              string `json:"type"`
+	AssociatedUID     string `json:"associatedUid"`
+	AssociatedRunDate string `json:"associatedRunDate"`
+}
+
+// compatAssociationTypes maps trackside's association types onto the legacy
+// API's vocabulary.
+var compatAssociationTypes = map[string]string{
+	"divides":      "divide",
+	"divided_from": "divide",
+	"joined_by":    "join",
+	"joins":        "join",
+	"forms":        "next",
+	"formed_from":  "prev",
+	"linked":       "linked",
+	"associated":   "linked",
 }
 
 func header(svc *timetable.Service) serviceHeader {

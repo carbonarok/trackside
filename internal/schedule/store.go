@@ -20,11 +20,12 @@ const batchSize = 2000
 
 // LoadResult summarises an import.
 type LoadResult struct {
-	Type      string
-	Sequence  int
-	Schedules int
-	Deletes   int
-	TIPLOCs   int
+	Type         string
+	Sequence     int
+	Schedules    int
+	Deletes      int
+	TIPLOCs      int
+	Associations int
 }
 
 // Load imports a SCHEDULE feed file. A "full" file replaces every CIF
@@ -69,6 +70,18 @@ func Load(ctx context.Context, pool *pgxpool.Pool, r io.Reader) (*LoadResult, er
 		if _, err := tx.Exec(ctx, `DELETE FROM schedules WHERE source = 'C'`); err != nil {
 			return nil, err
 		}
+		if _, err := tx.Exec(ctx, `DELETE FROM associations`); err != nil {
+			return nil, err
+		}
+	}
+	assocBatch := &pgx.Batch{}
+	flushAssociations := func() error {
+		if assocBatch.Len() == 0 {
+			return nil
+		}
+		err := tx.SendBatch(ctx, assocBatch).Close()
+		assocBatch = &pgx.Batch{}
+		return err
 	}
 
 	var batch []*Schedule
@@ -115,10 +128,24 @@ func Load(ctx context.Context, pool *pgxpool.Pool, r io.Reader) (*LoadResult, er
 				return nil, err
 			}
 			res.Deletes++
+		case rec.Association != nil:
+			queueAssociation(assocBatch, rec.Association)
+			res.Associations++
+		case rec.DeleteAssociation != nil:
+			queueDeleteAssociation(assocBatch, rec.DeleteAssociation)
+			res.Deletes++
+		}
+		if assocBatch.Len() >= 1000 {
+			if err := flushAssociations(); err != nil {
+				return nil, fmt.Errorf("associations: %w", err)
+			}
 		}
 	}
 	if err := flush(); err != nil {
 		return nil, err
+	}
+	if err := flushAssociations(); err != nil {
+		return nil, fmt.Errorf("associations: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `INSERT INTO feed_state (feed, value) VALUES ('schedule_sequence', $1)
 		ON CONFLICT (feed) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
@@ -184,6 +211,23 @@ func insertSchedules(ctx context.Context, tx pgx.Tx, batch []*Schedule, replace 
 		return fmt.Errorf("copy schedule locations: %w", err)
 	}
 	return nil
+}
+
+// queueAssociation stores an association, replacing any with the same key.
+func queueAssociation(b *pgx.Batch, a *Association) {
+	b.Queue(`INSERT INTO associations (main_uid, assoc_uid, start_date, end_date, days_runs,
+			category, date_indicator, tiploc, stp)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		ON CONFLICT (main_uid, assoc_uid, start_date, tiploc, stp) DO UPDATE SET
+			end_date = EXCLUDED.end_date, days_runs = EXCLUDED.days_runs,
+			category = EXCLUDED.category, date_indicator = EXCLUDED.date_indicator`,
+		a.MainUID, a.AssocUID, a.StartDate, a.EndDate, a.DaysRuns, nullStr(a.Category),
+		nullStr(a.DateIndicator), a.TIPLOC, a.STP)
+}
+
+func queueDeleteAssociation(b *pgx.Batch, a *Association) {
+	b.Queue(`DELETE FROM associations WHERE main_uid = $1 AND assoc_uid = $2 AND start_date = $3
+		AND tiploc = $4 AND stp = $5`, a.MainUID, a.AssocUID, a.StartDate, a.TIPLOC, a.STP)
 }
 
 func deleteSchedule(ctx context.Context, tx pgx.Tx, k Key) error {

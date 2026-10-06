@@ -43,6 +43,7 @@ func TestReaderFullFile(t *testing.T) {
 		t.Fatalf("header = %+v", recs[0].Header)
 	}
 	var tiplocs, schedules int
+	var assocs []*Association
 	for _, r := range recs {
 		if r.TIPLOC != nil {
 			tiplocs++
@@ -50,9 +51,16 @@ func TestReaderFullFile(t *testing.T) {
 		if r.Schedule != nil {
 			schedules++
 		}
+		if r.Association != nil {
+			assocs = append(assocs, r.Association)
+		}
 	}
-	if tiplocs != 5 || schedules != 6 {
-		t.Fatalf("tiplocs=%d schedules=%d, want 5 and 6", tiplocs, schedules)
+	if tiplocs != 5 || schedules != 8 || len(assocs) != 4 {
+		t.Fatalf("tiplocs=%d schedules=%d associations=%d, want 5, 8 and 4", tiplocs, schedules, len(assocs))
+	}
+	if a := assocs[0]; a.MainUID != "W10001" || a.AssocUID != "W10005" || a.Category != "VV" ||
+		a.TIPLOC != "WIMBLDN" || a.StartDate.Format("2006-01-02") != "2026-05-17" || a.DateIndicator != "S" {
+		t.Errorf("association = %+v", a)
 	}
 
 	s := findSchedule(recs, "W10001", "P")

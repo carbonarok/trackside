@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Pport xmlns="http://www.thalesgroup.com/rtti/PushPort/v18" xmlns:sch2="http://www.thalesgroup.com/rtti/PushPort/Schedules/v2" ts="2026-10-06T09:30:00.000+01:00" version="18.0">
+  <uR updateOrigin="Darwin">
+    <association tiploc="WOKING" category="NP" isCancelled="true">
+      <sch2:main rid="202610068710004" wta="09:05" pta="09:05" />
+      <sch2:assoc rid="202610068710002" wtd="23:50" ptd="23:50" />
+    </association>
+    <association tiploc="CLPHMJN" category="LK">
+      <sch2:main rid="202610068710002" wta="23:56" />
+      <sch2:assoc rid="202610068710004" wtd="08:37" />
+    </association>
+  </uR>
+</Pport>

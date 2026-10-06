@@ -25,6 +25,22 @@ type Update struct {
 	Deactivated  []struct {
 		RID string `xml:"rid,attr"`
 	} `xml:"deactivated"`
+	Associations []Association `xml:"association"`
+}
+
+// Association is Darwin's live view of a join (JJ), divide (VV), next
+// working (NP) or link (LK) between two trains.
+type Association struct {
+	TIPLOC    string `xml:"tiploc,attr"`
+	Category  string `xml:"category,attr"`
+	Cancelled bool   `xml:"isCancelled,attr"`
+	Deleted   bool   `xml:"isDeleted,attr"`
+	Main      struct {
+		RID string `xml:"rid,attr"`
+	} `xml:"main"`
+	Assoc struct {
+		RID string `xml:"rid,attr"`
+	} `xml:"assoc"`
 }
 
 // TrainStatus (TS) carries forecasts and actuals for some of a train's

@@ -254,7 +254,9 @@ type ServiceDetail struct {
 	Category   string    `json:"category,omitempty"`
 	Source     string    `json:"source"`
 	Position   *Position `json:"position,omitempty"`
-	Stops      []Stop    `json:"stops"`
+	// Associations are only included in service detail.
+	Associations []Association `json:"associations,omitempty"`
+	Stops        []Stop        `json:"stops"`
 }
 
 // Position is the last Train Describer berth the train occupied.
@@ -279,7 +281,41 @@ func (s *Server) service(w http.ResponseWriter, r *http.Request) {
 		serverError(w, err)
 		return
 	}
-	writeJSON(w, detail(svc))
+	assocs, err := s.Store.Associations(r.Context(), svc)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	d := detail(svc)
+	for _, a := range assocs {
+		out := Association{
+			Type:      a.Type,
+			Category:  a.Category,
+			Location:  toLocation(a.Location),
+			Cancelled: a.Cancelled,
+		}
+		if a.Other != nil {
+			sum := summary(a.Other)
+			out.Service = &sum
+		} else {
+			out.Service = &ServiceSummary{UID: a.OtherUID, RunDate: a.OtherRunDate.Format(time.DateOnly),
+				Origin: []Endpoint{}, Destination: []Endpoint{}}
+		}
+		d.Associations = append(d.Associations, out)
+	}
+	writeJSON(w, d)
+}
+
+// Association is a join, divide or next working, from this service's point
+// of view.
+type Association struct {
+	// Type is divides, divided_from, joined_by, joins, forms, formed_from or
+	// linked.
+	Type      string          `json:"type"`
+	Category  string          `json:"category"`
+	Location  Location        `json:"location"`
+	Cancelled bool            `json:"cancelled"`
+	Service   *ServiceSummary `json:"service"`
 }
 
 func detail(svc *timetable.Service) ServiceDetail {

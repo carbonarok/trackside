@@ -291,7 +291,8 @@ func importSchedule(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config, ar
 		return err
 	}
 	slog.Info("loaded schedule", "type", res.Type, "sequence", res.Sequence, "schedules", res.Schedules,
-		"deletes", res.Deletes, "tiplocs", res.TIPLOCs, "took", time.Since(start).Round(time.Second))
+		"deletes", res.Deletes, "tiplocs", res.TIPLOCs, "associations", res.Associations,
+		"took", time.Since(start).Round(time.Second))
 	if err := schedule.RefreshServices(ctx, pool); err != nil {
 		return err
 	}

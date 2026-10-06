@@ -66,6 +66,24 @@ type Record struct {
 	Schedule *Schedule
 	// Delete identifies a schedule removed by an update file.
 	Delete *Key
+	// Association is a join, divide or next-working link between trains.
+	Association *Association
+	// DeleteAssociation identifies an association removed by an update file.
+	DeleteAssociation *Association
+}
+
+// Association links two trains at a location. Dates and days apply to the
+// main train.
+type Association struct {
+	MainUID       string
+	AssocUID      string
+	StartDate     time.Time
+	EndDate       time.Time
+	DaysRuns      string
+	Category      string // JJ join, VV divide, NP next working
+	DateIndicator string // S same day, N next day, P previous day
+	TIPLOC        string
+	STP           string
 }
 
 // Header is the JsonTimetableV1 record at the top of every file.
@@ -120,9 +138,23 @@ func (r *Reader) Next() (*Record, error) {
 }
 
 type rawLine struct {
-	Header   *rawHeader   `json:"JsonTimetableV1"`
-	TIPLOC   *rawTIPLOC   `json:"TiplocV1"`
-	Schedule *rawSchedule `json:"JsonScheduleV1"`
+	Header      *rawHeader      `json:"JsonTimetableV1"`
+	TIPLOC      *rawTIPLOC      `json:"TiplocV1"`
+	Schedule    *rawSchedule    `json:"JsonScheduleV1"`
+	Association *rawAssociation `json:"JsonAssociationV1"`
+}
+
+type rawAssociation struct {
+	TransactionType string  `json:"transaction_type"`
+	MainUID         string  `json:"main_train_uid"`
+	AssocUID        string  `json:"assoc_train_uid"`
+	StartDate       string  `json:"assoc_start_date"`
+	EndDate         *string `json:"assoc_end_date"`
+	DaysRuns        *string `json:"assoc_days"`
+	Category        *string `json:"category"`
+	DateIndicator   *string `json:"date_indicator"`
+	Location        string  `json:"location"`
+	STP             string  `json:"CIF_stp_indicator"`
 }
 
 type rawHeader struct {
@@ -205,6 +237,8 @@ func decodeLine(line []byte) (*Record, error) {
 		}}, nil
 	case raw.Schedule != nil:
 		return convertSchedule(raw.Schedule)
+	case raw.Association != nil:
+		return convertAssociation(raw.Association)
 	}
 	return nil, nil
 }
@@ -256,6 +290,39 @@ func convertSchedule(r *rawSchedule) (*Record, error) {
 	}
 	s.Locations = buildLocations(locs)
 	return &Record{Schedule: s}, nil
+}
+
+// parseDate accepts "2026-05-17" or a timestamp such as
+// "2026-05-17T00:00:00Z"; association records use the latter.
+func parseDate(s string) (time.Time, error) {
+	if len(s) >= 10 {
+		s = s[:10]
+	}
+	return time.Parse(time.DateOnly, s)
+}
+
+func convertAssociation(r *rawAssociation) (*Record, error) {
+	start, err := parseDate(r.StartDate)
+	if err != nil {
+		return nil, fmt.Errorf("association %s/%s: start date: %w", r.MainUID, r.AssocUID, err)
+	}
+	a := &Association{
+		MainUID:       strings.TrimSpace(r.MainUID),
+		AssocUID:      strings.TrimSpace(r.AssocUID),
+		StartDate:     start,
+		DaysRuns:      str(r.DaysRuns),
+		Category:      str(r.Category),
+		DateIndicator: str(r.DateIndicator),
+		TIPLOC:        strings.TrimSpace(r.Location),
+		STP:           strings.TrimSpace(r.STP),
+	}
+	if r.TransactionType == "Delete" {
+		return &Record{DeleteAssociation: a}, nil
+	}
+	if a.EndDate, err = parseDate(str(r.EndDate)); err != nil {
+		return nil, fmt.Errorf("association %s/%s: end date: %w", a.MainUID, a.AssocUID, err)
+	}
+	return &Record{Association: a}, nil
 }
 
 // rawLoc is a location with times still relative to their own day.

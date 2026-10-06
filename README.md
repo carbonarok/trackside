@@ -27,6 +27,8 @@ own copy for free, with their own feed credentials.
 - **Full GB timetable** from Network Rail's SCHEDULE feed. It handles
   overlays, STP cancellations and trains that run past midnight.
 - **Short-notice trains** from the VSTP feed, applied as they arrive.
+- **Associations:** trains that divide, join or form the next working, from
+  the timetable, with Darwin's live changes on top.
 - **Live running** from TRUST: activations, actual times, platform changes,
   cancellations, reinstatements, and changes of origin or identity. Delays are
   carried forward to estimate times at later stops.
@@ -261,6 +263,11 @@ Board parameters:
 - `from`: arrivals only. Keep trains that called earlier at this location.
 - `passes=true`: include trains that pass without stopping.
 
+Service detail includes `associations`. Each one gives the type from this
+train's point of view (`divides`, `divided_from`, `joined_by`, `joins`,
+`forms`, `formed_from` or `linked`), the location, whether it's cancelled, and
+the other train.
+
 Each stop has `arrival`, `departure` or `pass` times. Each of those carries
 `public` (timetable), `working` (internal schedule), `actual` (reported by
 TRUST, Darwin or TD), `estimated` (Darwin's forecast, or projected from the
@@ -295,7 +302,10 @@ There is no authentication. A client that sends Basic auth works unchanged.
 
 Known differences from the original:
 
-- Association data is not given.
+- Associations appear on the location where they happen, as
+  `{type, associatedUid, associatedRunDate}` with types `divide`, `join`,
+  `next`, `prev` and `linked`. The legacy layout wasn't documented, so this is
+  a best guess.
 - `serviceLocation` only reports `AT_PLAT`, not the approach states.
 - Cancellation reason text comes from Darwin. Without Darwin it falls back to
   the industry description of the TRUST delay code, which is less
@@ -357,7 +367,8 @@ VSTP train. It then replays TRUST messages and checks both APIs.
 - [x] Rail Data Marketplace (Kafka) for all feeds
 - [x] Train Describer: TD-derived times, berth position and "at platform"
 - [ ] **Run against the live feeds** and fix whatever real data turns up
-- [ ] Darwin associations (joins and divides) and station messages (`OW`)
+- [x] Associations (joins, divides, next workings) from the timetable and Darwin
+- [ ] Darwin station messages (`OW`)
 - [ ] "Approaching" states from TD berth offsets
 - [x] Cancellation reason text from the delay attribution codes when there's
   no Darwin
