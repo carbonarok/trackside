@@ -1,0 +1,29 @@
+{
+ "destination": {
+  "name": "Consumer.rdmportal.VirtualTopic.PushPort-v18",
+  "destinationType": "queue"
+ },
+ "messageID": "ID:test-1",
+ "type": null,
+ "priority": 5,
+ "redelivered": false,
+ "messageType": "bytes",
+ "deliveryMode": 1,
+ "bytes": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPFBwb3J0IHhtbG5zPSJodHRwOi8vd3d3LnRoYWxlc2dyb3VwLmNvbS9ydHRpL1B1c2hQb3J0L3YxNiIgeG1sbnM6bnM1PSJodHRwOi8vd3d3LnRoYWxlc2dyb3VwLmNvbS9ydHRpL1B1c2hQb3J0L0ZvcmVjYXN0cy92MyIgdHM9IjIwMjYtMTAtMDZUMDg6MzE6MTIuMzQ1KzAxOjAwIiB2ZXJzaW9uPSIxNi4xIj4KICA8dVIgdXBkYXRlT3JpZ2luPSJEYXJ3aW4iPgogICAgPFRTIHJpZD0iMjAyNjEwMDY4NzEwMDA0IiB1aWQ9IlcxMDAwNCIgc3NkPSIyMDI2LTEwLTA2Ij4KICAgICAgPG5zNTpMYXRlUmVhc29uPjEwNDwvbnM1OkxhdGVSZWFzb24+CiAgICAgIDxuczU6TG9jYXRpb24gdHBsPSJXQVRSTE1OIiB3dGQ9IjA4OjMwIiBwdGQ9IjA4OjMwIj4KICAgICAgICA8bnM1OmRlcCBhdD0iMDg6MzMiIHNyYz0iVEQiIC8+CiAgICAgICAgPG5zNTpwbGF0IHBsYXRzdXA9InRydWUiIGNvbmY9InRydWUiPjc8L25zNTpwbGF0PgogICAgICA8L25zNTpMb2NhdGlvbj4KICAgICAgPG5zNTpMb2NhdGlvbiB0cGw9IkNMUEhNSk4iIHd0YT0iMDg6MzYiIHd0ZD0iMDg6MzciIHB0YT0iMDg6MzYiIHB0ZD0iMDg6MzciPgogICAgICAgIDxuczU6YXJyIGV0PSIwODo0MCIgc3JjPSJEYXJ3aW4iIC8+CiAgICAgICAgPG5zNTpkZXAgZXQ9IjA4OjQxIiBzcmM9IkRhcndpbiIgLz4KICAgICAgICA8bnM1OnBsYXQgY29uZj0idHJ1ZSI+MTE8L25zNTpwbGF0PgogICAgICA8L25zNTpMb2NhdGlvbj4KICAgICAgPG5zNTpMb2NhdGlvbiB0cGw9IldPS0lORyIgd3RhPSIwOTowMCIgcHRhPSIwOTowMCI+CiAgICAgICAgPG5zNTphcnIgZXQ9IjA5OjAwIiBkZWxheWVkPSJ0cnVlIiBzcmM9IkRhcndpbiIgLz4KICAgICAgPC9uczU6TG9jYXRpb24+CiAgICAgIDxuczU6TG9jYXRpb24gdHBsPSJOT1dIRVJFIiB3dHA9IjA4OjUwIj4KICAgICAgICA8bnM1OnBhc3MgZXQ9IjA4OjUxIiAvPgogICAgICA8L25zNTpMb2NhdGlvbj4KICAgIDwvVFM+CiAgPC91Uj4KPC9QcG9ydD4K",
+ "replyTo": null,
+ "correlationID": null,
+ "expiration": 1790000600000,
+ "text": null,
+ "map": null,
+ "properties": {
+  "Username": {
+   "string": "thales",
+   "propertyType": "string"
+  },
+  "PushPortSequence": {
+   "string": "1234567",
+   "propertyType": "string"
+  }
+ },
+ "timestamp": 1790000000000
+}

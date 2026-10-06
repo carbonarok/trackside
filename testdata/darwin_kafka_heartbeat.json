@@ -1,0 +1,29 @@
+{
+ "destination": {
+  "name": "Consumer.rdmportal.VirtualTopic.PushPort-v18",
+  "destinationType": "queue"
+ },
+ "messageID": "ID:test-1",
+ "type": null,
+ "priority": 5,
+ "redelivered": false,
+ "messageType": "bytes",
+ "deliveryMode": 1,
+ "bytes": "{\"ts\": \"2026-10-06T09:01:00+01:00\", \"version\": \"18.0\", \"FailureResp\": {\"code\": \"HBOK\"}}",
+ "replyTo": null,
+ "correlationID": null,
+ "expiration": 1790000600000,
+ "text": null,
+ "map": null,
+ "properties": {
+  "Username": {
+   "string": "thales",
+   "propertyType": "string"
+  },
+  "PushPortSequence": {
+   "string": "1234567",
+   "propertyType": "string"
+  }
+ },
+ "timestamp": 1790000000000
+}

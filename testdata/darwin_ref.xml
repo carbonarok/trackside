@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PportTimetableRef timetableId="20261006020500" xmlns="http://www.thalesgroup.com/rtti/XmlRefData/v3">
+  <LocationRef tpl="WATRLMN" crs="WAT" toc="NR" locname="London Waterloo" />
+  <LocationRef tpl="CLPHMJN" crs="CLJ" toc="NR" locname="Clapham Junction" />
+  <LocationRef tpl="WIMBLDN" crs="WIM" toc="SW" locname="Wimbledon" />
+  <LocationRef tpl="VAUXHLM" locname="VAUXHLM" />
+  <TocRef toc="SW" tocname="South Western Railway" url="http://www.southwesternrailway.com" />
+  <LateRunningReasons>
+    <Reason code="104" reasontext="This train has been delayed by a fault with the signalling system" />
+  </LateRunningReasons>
+  <CancellationReasons>
+    <Reason code="100" reasontext="This train has been cancelled because of a broken down train" />
+  </CancellationReasons>
+</PportTimetableRef>

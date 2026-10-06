@@ -1,0 +1,89 @@
+{
+ "BERTHDATA": [
+  {
+   "STANOX": "87703",
+   "STANME": "CLPHMJN",
+   "TD": "WI",
+   "FROMBERTH": "0101",
+   "TOBERTH": "0103",
+   "FROMLINE": "",
+   "TOLINE": "",
+   "BERTHOFFSET": "+30",
+   "PLATFORM": "12",
+   "EVENT": "D",
+   "ROUTE": "",
+   "STEPTYPE": "B",
+   "COMMENT": ""
+  },
+  {
+   "STANOX": "87704",
+   "STANME": "WIMBLDN",
+   "TD": "WI",
+   "FROMBERTH": "0201",
+   "TOBERTH": "0203",
+   "FROMLINE": "",
+   "TOLINE": "",
+   "BERTHOFFSET": "-15",
+   "PLATFORM": "8",
+   "EVENT": "A",
+   "ROUTE": "",
+   "STEPTYPE": "B",
+   "COMMENT": ""
+  },
+  {
+   "STANOX": "87704",
+   "STANME": "WIMBLDN",
+   "TD": "WI",
+   "FROMBERTH": "0205",
+   "TOBERTH": "",
+   "FROMLINE": "",
+   "TOLINE": "",
+   "BERTHOFFSET": "0",
+   "PLATFORM": "5",
+   "EVENT": "A",
+   "ROUTE": "",
+   "STEPTYPE": "F",
+   "COMMENT": ""
+  },
+  {
+   "STANOX": "87704",
+   "STANME": "WIMBLDN",
+   "TD": "WI",
+   "FROMBERTH": "0207",
+   "TOBERTH": "",
+   "FROMLINE": "",
+   "TOLINE": "",
+   "BERTHOFFSET": "0",
+   "PLATFORM": "",
+   "EVENT": "B",
+   "ROUTE": "",
+   "STEPTYPE": "C",
+   "COMMENT": ""
+  },
+  {
+   "STANOX": "87704",
+   "STANME": "WIMBLDN",
+   "TD": "WI",
+   "FROMBERTH": "",
+   "TOBERTH": "0209",
+   "FROMLINE": "",
+   "TOLINE": "",
+   "BERTHOFFSET": "0",
+   "PLATFORM": "",
+   "EVENT": "C",
+   "ROUTE": "",
+   "STEPTYPE": "I",
+   "COMMENT": ""
+  },
+  {
+   "STANOX": " ",
+   "STANME": "",
+   "TD": "WI",
+   "FROMBERTH": "0001",
+   "TOBERTH": "0002",
+   "BERTHOFFSET": "0",
+   "EVENT": "A",
+   "STEPTYPE": "B"
+  }
+ ]
+}

@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: trackside
+      POSTGRES_PASSWORD: trackside
+      POSTGRES_DB: trackside
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trackside"]
+      interval: 5s
+      retries: 10
+
+  trackside:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://trackside:trackside@db:5432/trackside?sslmode=disable
+      NR_USERNAME: ${NR_USERNAME:-}
+      NR_PASSWORD: ${NR_PASSWORD:-}
+      NR_CLIENT_ID: ${NR_CLIENT_ID:-}
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

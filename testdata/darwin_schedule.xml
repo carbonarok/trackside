@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Pport xmlns="http://www.thalesgroup.com/rtti/PushPort/v16" xmlns:ns2="http://www.thalesgroup.com/rtti/PushPort/Schedules/v3" ts="2026-10-06T22:00:00.000+01:00" version="16.1">
+  <uR updateOrigin="CIS">
+    <schedule rid="202610068710002" uid="W10002" trainId="2W99" ssd="2026-10-06" toc="SW" isPassengerSvc="true">
+      <ns2:OR tpl="WATRLMN" act="TB" ptd="23:50" wtd="23:50" can="true" />
+      <ns2:IP tpl="CLPHMJN" act="T " pta="23:56" ptd="23:57" wta="23:56" wtd="23:57" can="true" />
+      <ns2:IP tpl="WIMBLDN" act="T " pta="00:02" ptd="00:03" wta="00:02" wtd="00:03" can="true" />
+      <ns2:DT tpl="WOKING" act="TF" pta="00:25" wta="00:25" can="true" />
+      <ns2:cancelReason>100</ns2:cancelReason>
+    </schedule>
+  </uR>
+</Pport>

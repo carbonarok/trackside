@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Pport xmlns="http://www.thalesgroup.com/rtti/PushPort/v16" xmlns:ns5="http://www.thalesgroup.com/rtti/PushPort/Forecasts/v3" ts="2026-10-06T08:31:12.345+01:00" version="16.1">
+  <uR updateOrigin="Darwin">
+    <TS rid="202610068710004" uid="W10004" ssd="2026-10-06">
+      <ns5:LateReason>104</ns5:LateReason>
+      <ns5:Location tpl="WATRLMN" wtd="08:30" ptd="08:30">
+        <ns5:dep at="08:33" src="TD" />
+        <ns5:plat platsup="true" conf="true">7</ns5:plat>
+      </ns5:Location>
+      <ns5:Location tpl="CLPHMJN" wta="08:36" wtd="08:37" pta="08:36" ptd="08:37">
+        <ns5:arr et="08:40" src="Darwin" />
+        <ns5:dep et="08:41" src="Darwin" />
+        <ns5:plat conf="true">11</ns5:plat>
+      </ns5:Location>
+      <ns5:Location tpl="WOKING" wta="09:00" pta="09:00">
+        <ns5:arr et="09:00" delayed="true" src="Darwin" />
+      </ns5:Location>
+      <ns5:Location tpl="NOWHERE" wtp="08:50">
+        <ns5:pass et="08:51" />
+      </ns5:Location>
+    </TS>
+  </uR>
+</Pport>
