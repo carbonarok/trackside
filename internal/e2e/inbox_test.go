@@ -123,6 +123,10 @@ func TestInbox(t *testing.T) {
 	if count(`SELECT count(*) FROM darwin_reasons`) != 2 {
 		t.Errorf("Darwin reference data not loaded")
 	}
+	// CORPUS gives Clapham's CRS to one TIPLOC; Darwin gives it to all.
+	if n := count(`SELECT count(*) FROM locations WHERE crs = 'CLJ' AND name = 'Clapham Junction'`); n != 2 {
+		t.Errorf("Clapham Junction TIPLOCs with its CRS = %d, want 2", n)
+	}
 	if count(`SELECT count(*) FROM services`) == 0 {
 		t.Errorf("services not resolved after import")
 	}

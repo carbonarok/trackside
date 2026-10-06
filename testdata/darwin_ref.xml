@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PportTimetableRef timetableId="20261006020500" xmlns="http://www.thalesgroup.com/rtti/XmlRefData/v3">
   <LocationRef tpl="WATRLMN" crs="WAT" toc="NR" locname="London Waterloo" />
+  <LocationRef tpl="CLPHMJC" crs="CLJ" toc="NR" locname="Clapham Junction" />
   <LocationRef tpl="CLPHMJN" crs="CLJ" toc="NR" locname="Clapham Junction" />
   <LocationRef tpl="WIMBLDN" crs="WIM" toc="SW" locname="Wimbledon" />
   <LocationRef tpl="VAUXHLM" locname="VAUXHLM" />

@@ -64,7 +64,11 @@ func LoadReference(ctx context.Context, pool *pgxpool.Pool, ref *Reference) erro
 		if l.CRS == "" || l.LocName == "" || strings.EqualFold(l.LocName, l.TPL) {
 			continue
 		}
-		b.Queue(`UPDATE locations SET name = $2, name_source = 'darwin' WHERE tiploc = $1`, l.TPL, l.LocName)
+		// CORPUS gives a big station's CRS to one of its TIPLOCs only; Darwin
+		// gives it to all of them (Clapham Junction has five), which is what
+		// a station board needs to find every train.
+		b.Queue(`UPDATE locations SET name = $2, crs = $3, name_source = 'darwin' WHERE tiploc = $1`,
+			l.TPL, l.LocName, strings.ToUpper(l.CRS))
 	}
 	return pool.SendBatch(ctx, b).Close()
 }
