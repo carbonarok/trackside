@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/carbonarok/trackside/internal/timetable"
+	"github.com/carbonarok/trackside/internal/trust"
 	"github.com/carbonarok/trackside/internal/ukrail"
 )
 
@@ -385,6 +386,11 @@ func locationDetail(svc *timetable.Service, i int) LocationDetail {
 		d.CancelReasonCode = svc.CancelReason
 		d.CancelReasonLongText = svc.CancelReasonText
 		d.CancelReasonShortText = shortReason(svc.CancelReasonText)
+		// Without Darwin, fall back to the delay attribution code's cause.
+		if c, ok := trust.LookupDelayCode(svc.CancelReason); ok && d.CancelReasonLongText == "" {
+			d.CancelReasonLongText = c.Cause
+			d.CancelReasonShortText = c.Cause
+		}
 	}
 	return d
 }

@@ -309,8 +309,15 @@ func TestPipeline(t *testing.T) {
 		if d.Status != "partially_cancelled" || !wim.TerminatesHere || wim.Cancelled || !wok.Cancelled {
 			t.Errorf("status=%s WIM=%+v WOK=%+v", d.Status, wim, wok)
 		}
-		if d.CancelReason != "YI" {
-			t.Errorf("reason = %q", d.CancelReason)
+		if d.CancelReason != "YI" || !strings.HasPrefix(d.CancelReasonCodeDescription, "Late arrival of booked inward stock") {
+			t.Errorf("reason = %q (%q)", d.CancelReason, d.CancelReasonCodeDescription)
+		}
+		var svc struct {
+			Locations []compat.LocationDetail `json:"locations"`
+		}
+		get(t, srv, "/api/v1/json/service/W10001/2026/10/06", &svc)
+		if got := svc.Locations[4].CancelReasonLongText; !strings.HasPrefix(got, "Late arrival of booked inward stock") {
+			t.Errorf("compat fallback reason = %q", got)
 		}
 	})
 

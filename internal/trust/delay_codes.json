@@ -1,0 +1,1030 @@
+{
+ "source": "Delay Attribution Principles and Rules, April 2025, Section S (Delay Attribution Board, Network Rail)",
+ "url": "https://www.networkrail.co.uk/wp-content/uploads/2025/06/April-2025-DAPR.pdf",
+ "codes": {
+  "AA": {
+   "cause": "Waiting acceptance into off Network Rail network Terminal or Yard",
+   "abbreviation": "ACCEPTANCE"
+  },
+  "AC": {
+   "cause": "Waiting train preparation or completion of TOPS list/RT3973",
+   "abbreviation": "TRAIN PREP"
+  },
+  "AD": {
+   "cause": "Off Network Rail network Terminal or Yard staff shortage including reactionary congestion caused by the shortage",
+   "abbreviation": "WTG STAFF"
+  },
+  "AG": {
+   "cause": "Wagon load incident including adjusting loads or open door",
+   "abbreviation": "LOAD INCDT"
+  },
+  "AH": {
+   "cause": "Customer or off Network Rail network yard equipment breakdown/reduced capacity",
+   "abbreviation": "YARD EQUIP"
+  },
+  "AJ": {
+   "cause": "Waiting Customer's traffic including release information and documentation",
+   "abbreviation": "TRAF DOC"
+  },
+  "AK": {
+   "cause": "Safety incidents and mishaps (e.g. derailments, fire or chemical spill) in off Network Rail network freight yard or terminal (including private sidings, and stations – where it affects FOC services)",
+   "abbreviation": "YARDSAFETY"
+  },
+  "AX": {
+   "cause": "Failure of off network infrastructure (FOC or private)",
+   "abbreviation": "OFFNET INF"
+  },
+  "AZ": {
+   "cause": "Other Freight Operating Company cause, to be specified (including congestion), in off Network Rail network terminals or yards",
+   "abbreviation": "YARD OTHER"
+  },
+  "DA": {
+   "cause": "Non Technical Fleet Holding Code",
+   "abbreviation": "HOLD NT FL"
+  },
+  "DB": {
+   "cause": "Train Operations Holding Code",
+   "abbreviation": "HOLD T-OPS"
+  },
+  "DC": {
+   "cause": "Train Crew Causes Holding Code",
+   "abbreviation": "HOLD T-CRW"
+  },
+  "DD": {
+   "cause": "Technical Fleet Holding Code",
+   "abbreviation": "HOLD T FL"
+  },
+  "DE": {
+   "cause": "Station Causes Holding Code",
+   "abbreviation": "HOLD STN"
+  },
+  "DF": {
+   "cause": "External Causes Holding Code",
+   "abbreviation": "HOLD EXT"
+  },
+  "DG": {
+   "cause": "Freight Terminal and or Yard Holding Code",
+   "abbreviation": "HOLD YARD"
+  },
+  "DH": {
+   "cause": "Adhesion and or Autumn Holding Code",
+   "abbreviation": "HOLD AUTM"
+  },
+  "FA": {
+   "cause": "Dangerous goods incident",
+   "abbreviation": "DANG GOODS"
+  },
+  "FC": {
+   "cause": "Freight Train Driver error, SPAD, Wrong routing or Missed AWS/DSD",
+   "abbreviation": "DVR ERROR"
+  },
+  "FE": {
+   "cause": "Train crew not available including after rest",
+   "abbreviation": "NO T-CREW"
+  },
+  "FF": {
+   "cause": "FOC Diagramming or Rostering issue",
+   "abbreviation": "FOC DIAG"
+  },
+  "FG": {
+   "cause": "Driver adhering to company professional driving standards or policy",
+   "abbreviation": "PRO DRIVER"
+  },
+  "FH": {
+   "cause": "FOC Planning issue (not diagramming or rostering)",
+   "abbreviation": "FOC PLAN"
+  },
+  "FI": {
+   "cause": "Delay due to incorrect ETCS system or equipment operation by Driver",
+   "abbreviation": "ETCS DVR"
+  },
+  "FJ": {
+   "cause": "FOC Control decision or directive including diversion requests and errors",
+   "abbreviation": "FOC CONTRL"
+  },
+  "FL": {
+   "cause": "Train cancelled at FOC request or planned not to run",
+   "abbreviation": "CANCEL REQ"
+  },
+  "FM": {
+   "cause": "Tail lamp or head lamp out or incorrectly shown",
+   "abbreviation": "LAMP ISSUE"
+  },
+  "FO": {
+   "cause": "Time lost en-route believed to be Operator cause and information required from Operator (Ops Responsibility)",
+   "abbreviation": "LIR UNEX"
+  },
+  "FW": {
+   "cause": "Late start or yard overtime not explained by Train Operator",
+   "abbreviation": "LATE START"
+  },
+  "FX": {
+   "cause": "Freight train running at lower class or speed than planned classification or overweight",
+   "abbreviation": "TRAIN SPEC"
+  },
+  "FZ": {
+   "cause": "Other FOC causes incl. cause to be specified, including mishaps.",
+   "abbreviation": "FOC OTHER"
+  },
+  "I0": {
+   "cause": "Telecom equipment legacy radio failure (RETB)",
+   "abbreviation": "RETB FLR"
+  },
+  "I1": {
+   "cause": "Overhead line/3rd rail defect",
+   "abbreviation": "OHL/3 RAIL"
+  },
+  "I2": {
+   "cause": "AC/DC trip (including no fault or cause found)",
+   "abbreviation": "AC/DC TRIP"
+  },
+  "I4": {
+   "cause": "OHLE/3rd rail power supply failure or reduction",
+   "abbreviation": "SUPPLY FLR"
+  },
+  "I5": {
+   "cause": "Possession over-run from planned work",
+   "abbreviation": "OVERRUN"
+  },
+  "I6": {
+   "cause": "Delays as a result of line blocks / track patrols (including late handback)",
+   "abbreviation": "LINE BLOCK"
+  },
+  "I7": {
+   "cause": "Engineer's train late into, from or failed in possession",
+   "abbreviation": "ENGNRS TRN"
+  },
+  "I8": {
+   "cause": "Trains striking animals (excluding birds) or animal incursion resulting in cautioning of trains or directly affecting infrastructure assets",
+   "abbreviation": "ANIMAL"
+  },
+  "I9": {
+   "cause": "Fires starting on Network Rail Infrastructure",
+   "abbreviation": "INFRA FIRE"
+  },
+  "IA": {
+   "cause": "Signal failure (including no fault found)",
+   "abbreviation": "SIGNAL FLR"
+  },
+  "IB": {
+   "cause": "Points failure (including no fault found)",
+   "abbreviation": "POINTS FLR"
+  },
+  "IC": {
+   "cause": "Track circuit failure (including no fault found)",
+   "abbreviation": "TC FAILURE"
+  },
+  "ID": {
+   "cause": "Level crossing faults and failure incl. barrow/foot crossings and crossing treadles",
+   "abbreviation": "LEVEL XING"
+  },
+  "IE": {
+   "cause": "Signalling functional power supply failure SIG",
+   "abbreviation": "FUNC PWR"
+  },
+  "IF": {
+   "cause": "Train Describer/Panel/ARS/SSI/TDM/Remote Control failure",
+   "abbreviation": "PANEL FLR"
+  },
+  "IG": {
+   "cause": "Block failure",
+   "abbreviation": "BLOCK FLR"
+  },
+  "IH": {
+   "cause": "Power supply and distribution system failure PWR",
+   "abbreviation": "SUP DIS"
+  },
+  "II": {
+   "cause": "Signalling lineside cable fault",
+   "abbreviation": "SIG CABLE"
+  },
+  "IJ": {
+   "cause": "AWS/ATP/TPWS/Train Stop (lineside/on-track equipment failure)",
+   "abbreviation": "AWS/ATP"
+  },
+  "IK": {
+   "cause": "Telecom equipment failure (including no fault found)",
+   "abbreviation": "TELECOMS"
+  },
+  "IL": {
+   "cause": "Token equipment failure (including no fault found)",
+   "abbreviation": "TOKEN FLR"
+  },
+  "IM": {
+   "cause": "Infrastructure Balise Failure (TASS / ETCS / ERTMS)",
+   "abbreviation": "BALISE FLR"
+  },
+  "IN": {
+   "cause": "HABD/Panchex/WILD/Wheelchex fault, failure or mis-detection",
+   "abbreviation": "HABD FAULT"
+  },
+  "IP": {
+   "cause": "Points failure caused by snow or frost where heaters are fitted but found to be not turned on, not operative or defective",
+   "abbreviation": "POINT HEAT"
+  },
+  "IQ": {
+   "cause": "Trackside sign blown down, fallen over, missing, defective, mis-placed",
+   "abbreviation": "TRACK SIGN"
+  },
+  "IR": {
+   "cause": "Broken/cracked/twisted/buckled/flawed rail",
+   "abbreviation": "RAIL FLAW"
+  },
+  "IS": {
+   "cause": "Track defects (other than rail defects) inc. fish plates, wet beds etc.",
+   "abbreviation": "TRACK FLT"
+  },
+  "IT": {
+   "cause": "Rough ride or bumps reported - cause not known or no fault found",
+   "abbreviation": "TRACK NFF"
+  },
+  "IV": {
+   "cause": "Cutting or embankment earth slip, rock fall or subsidence (not the result of severe weather on the day of failure)",
+   "abbreviation": "EARTHSLIP"
+  },
+  "IW": {
+   "cause": "Non severe weather - snow/ice/frost affecting infrastructure equipment excluding points",
+   "abbreviation": "INF WEATHR"
+  },
+  "J0": {
+   "cause": "(zero) Telecom equipment radio failure (GSM-R)",
+   "abbreviation": "GSM-R FLR"
+  },
+  "J2": {
+   "cause": "Network Rail train dispatch equipment failure ( including no fault found but excluding telecoms equipment)",
+   "abbreviation": "TRTS FLR"
+  },
+  "J3": {
+   "cause": "Axle Counter Failure",
+   "abbreviation": "AXLE C FLR"
+  },
+  "J4": {
+   "cause": "Infrastructure Safety Issue Reported by Member of the Public – No Fault Found",
+   "abbreviation": "MOP NFF"
+  },
+  "J5": {
+   "cause": "Infrastructure Asset Fault Reported but Proven to be mistaken",
+   "abbreviation": "MIS REPORT"
+  },
+  "J6": {
+   "cause": "Lightning strike on protected and unprotected assets",
+   "abbreviation": "LIGHTNING"
+  },
+  "J7": {
+   "cause": "ETCS/ERTMS/CBTC Equipment Failure (excluding communications link and balises)",
+   "abbreviation": "ETCS/CBTC"
+  },
+  "J8": {
+   "cause": "Damage to infrastructure caused by on-track machine whilst operating in a possession",
+   "abbreviation": "OTM DAMAGE"
+  },
+  "J9": {
+   "cause": "Preventative Maintenance to the infrastructure in response to a Remote Condition Monitoring Alert",
+   "abbreviation": "RCM ALERT"
+  },
+  "JA": {
+   "cause": "TSR speed restrictions for track work outside of the Timetable Planning Rules",
+   "abbreviation": "TSRNOT EAS"
+  },
+  "JB": {
+   "cause": "Reactionary Delay to ‘P’ coded TSR",
+   "abbreviation": "TSR REACTN"
+  },
+  "JD": {
+   "cause": "Structures - Bridges/tunnels/buildings/retaining walls/sea defences (not bridge strikes)",
+   "abbreviation": "STRUCTURES"
+  },
+  "JF": {
+   "cause": "Off track asset defects or issues on the Network Rail network including fencing, gates, walkways, lighting (not due to vandalism or weather or where the asset is part of the station infrastructure)",
+   "abbreviation": "OFFTRK ASS"
+  },
+  "JH": {
+   "cause": "Critical Rail Temperature speeds, (other than buckled rails)",
+   "abbreviation": "HEAT SPEED"
+  },
+  "JK": {
+   "cause": "Flooding not due to exceptional weather",
+   "abbreviation": "FLOODING"
+  },
+  "JL": {
+   "cause": "Safety related incident caused by maintenance or infrastructure staff oversight or error (not Operations staff)",
+   "abbreviation": "SAFETY INF"
+  },
+  "JP": {
+   "cause": "Failure to maintain vegetation within network boundaries in accordance with prevailing Network Rail standards, including where signals are obscured and a train strikes branches.",
+   "abbreviation": "VEGETATION"
+  },
+  "JR": {
+   "cause": "Delay due to RBC issues affecting ETCS/ATO/CBTC operation (not balise related)",
+   "abbreviation": "RBC"
+  },
+  "JS": {
+   "cause": "Condition of Track TSR outside the Timetable Planning Rules",
+   "abbreviation": "TRACK COND"
+  },
+  "JT": {
+   "cause": "Points failure caused by snow or frost where heaters are not fitted.",
+   "abbreviation": "NO PNT HTR"
+  },
+  "JX": {
+   "cause": "Miscellaneous items on the track or railhead, including litter, (not including leaves or the result of demonstrated vandalism, weather or fallen/thrown from trains)",
+   "abbreviation": "MISC OBJCT"
+  },
+  "M0": {
+   "cause": "(zero) Confirmed train cab-based safety system fault (including GSM-R)",
+   "abbreviation": "CAB SAFETY"
+  },
+  "M1": {
+   "cause": "Confirmed Pantograph ADD, associated system faults, positive PANCHEX activations and train borne power switch over systems (AC)",
+   "abbreviation": "PANTO/AC"
+  },
+  "M2": {
+   "cause": "Delay due to ATO / ETCS equipment",
+   "abbreviation": "ETCS CBTC"
+  },
+  "M7": {
+   "cause": "Door and Door system faults",
+   "abbreviation": "DOORS"
+  },
+  "M8": {
+   "cause": "Other technical failures above the Solebar",
+   "abbreviation": "ABOVE SBAR"
+  },
+  "M9": {
+   "cause": "Reported fleet equipment defect - no fault found",
+   "abbreviation": "FLEET NFF"
+  },
+  "MB": {
+   "cause": "Electric loco failure, defect, attention.",
+   "abbreviation": "ELEC LOCO"
+  },
+  "MC": {
+   "cause": "Diesel loco failure, defect, attention.",
+   "abbreviation": "DIESL LOCO"
+  },
+  "MD": {
+   "cause": "Other technical failures below the solebar",
+   "abbreviation": "BELOW SBAR"
+  },
+  "ME": {
+   "cause": "Steam locomotive failure/defect/attention",
+   "abbreviation": "STEAM LOCO"
+  },
+  "MF": {
+   "cause": "Off depot non-technical fleet delay",
+   "abbreviation": "NON TECH"
+  },
+  "MG": {
+   "cause": "Technical failure off depot",
+   "abbreviation": "OFF DEPOT"
+  },
+  "ML": {
+   "cause": "Wagons, coaches and parcel vehicle faults",
+   "abbreviation": "WAGN/COACH"
+  },
+  "MN": {
+   "cause": "Brake and brake systems faults; including wheel flats where no other cause had been identified",
+   "abbreviation": "BRAKE/WHLS"
+  },
+  "MP": {
+   "cause": "Rail / wheel interface, adhesion problems (including ice on the running rail)",
+   "abbreviation": "ADHESION"
+  },
+  "MQ": {
+   "cause": "Confirmed shoe beam or associated system faults Incl. train borne power switch over systems (DC)",
+   "abbreviation": "SHOE/DC"
+  },
+  "MR": {
+   "cause": "Sanders and scrubber faults",
+   "abbreviation": "SANDER"
+  },
+  "MS": {
+   "cause": "Planned underpowered or shortformed service and or vehicle, incl. exam set swaps",
+   "abbreviation": "ALOC STOCK"
+  },
+  "MT": {
+   "cause": "Confirmed train borne safety system faults (not cab based)",
+   "abbreviation": "SYST FAULT"
+  },
+  "MU": {
+   "cause": "Depot operating problem",
+   "abbreviation": "DEPOT OPS"
+  },
+  "MV": {
+   "cause": "Engineer’s on-track equipment failure outside possession",
+   "abbreviation": "ON-TRACK"
+  },
+  "MW": {
+   "cause": "Weather – effect on T&RS equipment",
+   "abbreviation": "WEATHR FLT"
+  },
+  "MY": {
+   "cause": "Coupler, Coupler system and Jumper cable faults",
+   "abbreviation": "COUPLER"
+  },
+  "NA": {
+   "cause": "On-train TASS/TILT failure",
+   "abbreviation": "TASS/TILT"
+  },
+  "OA": {
+   "cause": "Regulation decision made with best endeavours",
+   "abbreviation": "ENDVR REG"
+  },
+  "OB": {
+   "cause": "Delayed by signaller not applying applicable regulating policy",
+   "abbreviation": "REGULATION"
+  },
+  "OC": {
+   "cause": "Signaller including mis-routing (not ERTM/CBTC/ETCS related)",
+   "abbreviation": "SIGNALLER"
+  },
+  "OD": {
+   "cause": "Delays due to National/Regional/Route Operations directives or Route Control decision or directive",
+   "abbreviation": "NR CONTROL"
+  },
+  "OE": {
+   "cause": "Failure to lay Sandite or operate Railhead Conditioning train as programmed",
+   "abbreviation": "RHC PROG"
+  },
+  "OF": {
+   "cause": "Delay due to incorrect ETCS /CBTC system or equipment operation by Signaller / Controller",
+   "abbreviation": "ETCS CTRL"
+  },
+  "OG": {
+   "cause": "Ice on conductor rail/OHLE",
+   "abbreviation": "ICING"
+  },
+  "OH": {
+   "cause": "ARS / TMS / SARS software problem (excluding scheduling issues and technical failures)",
+   "abbreviation": "ARS / TMS"
+  },
+  "OJ": {
+   "cause": "Fire in station building or on platform, affecting operators not booked to call at that station",
+   "abbreviation": "STN FIRE"
+  },
+  "OK": {
+   "cause": "Delay caused by Operating staff oversight, issues or absence (excluding signallers and Control)",
+   "abbreviation": "OPTG STAFF"
+  },
+  "OL": {
+   "cause": "Signal Box not open during booked hours",
+   "abbreviation": "BOX CLOSED"
+  },
+  "OM": {
+   "cause": "Technical failure associated with a Railhead Conditioning train",
+   "abbreviation": "RHC FAIL"
+  },
+  "ON": {
+   "cause": "Investigated and concluded delays not reallocated to a Train Operator within contractual timescales",
+   "abbreviation": "NR CONTRCT"
+  },
+  "OQ": {
+   "cause": "Incorrect Simplifier (where produced by Ops staff)",
+   "abbreviation": "SIMPLIFIER"
+  },
+  "OR": {
+   "cause": "LOM directive or Signaller correctly applying local Operations (Box) Instructions (unless applied due to a late running train or infrastructure Accepted Design Limitation)",
+   "abbreviation": "BOX INSTR"
+  },
+  "OS": {
+   "cause": "Late start or delays to Railhead Conditioning (RHC) or Ghost Train due to its own activity and not in reaction to another incident.",
+   "abbreviation": "RHC LATE"
+  },
+  "OT": {
+   "cause": "Operational Safety TSR /ESR implemented for Operational Safety reasons and/or sighting issues relating to foot crossings, level crossings or signals (Not vegetation caused)",
+   "abbreviation": "OPS SPEED"
+  },
+  "OU": {
+   "cause": "Delays not investigated by Network Rail",
+   "abbreviation": "NOT INVEST"
+  },
+  "OV": {
+   "cause": "Fire or evacuation due to fire alarm of Network Rail buildings other than stations not due to vandalism",
+   "abbreviation": "NR FIRE"
+  },
+  "OW": {
+   "cause": "Connections held where the Prime Incident causing delay to the incoming train is a FOC responsibility incident and the next departing service is scheduled to depart less than 60 minutes later than the train being held.",
+   "abbreviation": "FOC CONECT"
+  },
+  "PA": {
+   "cause": "Published TSR associated with Planned Engineering Works where time loss is within Engineering Allowance",
+   "abbreviation": "PLANND ENG"
+  },
+  "PB": {
+   "cause": "Published TSR due to condition of asset (not associated with Engineering Work) where time loss is within Engineering Allowance",
+   "abbreviation": "PLANND CON"
+  },
+  "PD": {
+   "cause": "System generated cancellation (NOT to be attributed to manually)",
+   "abbreviation": "SYSTM CANC"
+  },
+  "PE": {
+   "cause": "Planned cancellation due to Network Rail restrictions of use (including engineering work) where that cancellation is identified and agreed prior to 22.00 the day before the schedule runs",
+   "abbreviation": "NR P CANC"
+  },
+  "PF": {
+   "cause": "Planned engineering work where a published diversion/SLW is not provided for in the schedule but where time loss is within Engineering Allowance",
+   "abbreviation": "DIVRSN SLW"
+  },
+  "PG": {
+   "cause": "Planned cancellation due to Train Operator requirements where that cancellation is identified and agreed prior to 22.00 the day before the schedule runs",
+   "abbreviation": "OP P CAPE"
+  },
+  "PJ": {
+   "cause": "Cancellation of a duplicate or erroneous schedule or an identified duplicate, false or erroneous delay (NOT berth off set related)",
+   "abbreviation": "DUPLICATE"
+  },
+  "PL": {
+   "cause": "Exclusion commercially agreed and documented between Network Rail and Train Operator",
+   "abbreviation": "AGREED EXC"
+  },
+  "PN": {
+   "cause": "Freight and non-applicable Passenger VSTP service delays of under 5 minutes caused by regulation and or time lost in running (VSTP Schedule delay ONLY where that delay causes no reactionary delay)",
+   "abbreviation": "VSTP DELAY"
+  },
+  "PT": {
+   "cause": "Authorised TRUST reporting anomalies or inaccuracies relating to berth off sets",
+   "abbreviation": "TRUST ANOM"
+  },
+  "QA": {
+   "cause": "WTT Schedule and or LTP process including incorrect simplifiers (where produced by Capacity Planning).",
+   "abbreviation": "WTT SCHED"
+  },
+  "QB": {
+   "cause": "Planned engineering work - diversion/SLW not timetabled (outside the Timetable Planning Rules.)",
+   "abbreviation": "DIVRSN/SLW"
+  },
+  "QH": {
+   "cause": "Adhesion problems due to leaf contamination (not the result of non-compliant vegetation management)",
+   "abbreviation": "RAILCONTAM"
+  },
+  "QI": {
+   "cause": "Cautioning due to railhead leaf contamination",
+   "abbreviation": "CAUTCONTAM"
+  },
+  "QJ": {
+   "cause": "Special working for leaf-fall track circuit operation",
+   "abbreviation": "LEAVES T/C"
+  },
+  "QM": {
+   "cause": "Train Schedule VAR/STP process including incorrect simplifiers (where produced by Capacity Planning).",
+   "abbreviation": "STP SCHED"
+  },
+  "QN": {
+   "cause": "VSTP schedule / VSTP process (TSI created schedule)",
+   "abbreviation": "VSTP SCHED"
+  },
+  "QP": {
+   "cause": "Reactionary Delay to “P” coded Possession",
+   "abbreviation": "PLND REACT"
+  },
+  "R1": {
+   "cause": "Station staff dispatch issues including dispatch errors",
+   "abbreviation": "DISPATCH"
+  },
+  "R2": {
+   "cause": "Late TRTS given by station staff",
+   "abbreviation": "LATE TRTS"
+  },
+  "R3": {
+   "cause": "Station staff unavailable - missing or uncovered",
+   "abbreviation": "STAFF MSNG"
+  },
+  "R4": {
+   "cause": "Station staff split responsibility - unable to cover all duties",
+   "abbreviation": "STAFF DUTY"
+  },
+  "R5": {
+   "cause": "Station staff error - e.g. wrong announcements, misdirection",
+   "abbreviation": "STAFF ERR"
+  },
+  "R7": {
+   "cause": "Station delays as a result of overcrowding due to planned events (e.g. sports fixtures, concerts)",
+   "abbreviation": "PLND EVENT"
+  },
+  "R8": {
+   "cause": "Delay at staffed Station believed to be Operator cause and information required from Operator (Station Responsibility)",
+   "abbreviation": "STF UNEX"
+  },
+  "RA": {
+   "cause": "Station Buildings and Facilities (incl Platforms)",
+   "abbreviation": "STN BLDNGS"
+  },
+  "RB": {
+   "cause": "Passengers joining/alighting",
+   "abbreviation": "PASSENGERS"
+  },
+  "RC": {
+   "cause": "Pre-booked assistance for a person with reduced mobility joining/alighting",
+   "abbreviation": "BKD ASSIST"
+  },
+  "RD": {
+   "cause": "Attaching/detaching/Shunter/watering",
+   "abbreviation": "ATT/DETACH"
+  },
+  "RE": {
+   "cause": "Lift/escalator defect/failure",
+   "abbreviation": "LIFT/ESC"
+  },
+  "RH": {
+   "cause": "Station evacuated due to fire alarm",
+   "abbreviation": "FIRE ALARM"
+  },
+  "RI": {
+   "cause": "Waiting connections from other trains - not authorised by TOC Control and not part of a connection policy",
+   "abbreviation": "UNAUTH CON"
+  },
+  "RJ": {
+   "cause": "Special Stop Orders - not authorised by TOC Control",
+   "abbreviation": "UNAUTH SSO"
+  },
+  "RK": {
+   "cause": "Waiting passenger connections arranged by station staff in accordance with pre-authorised TOC arrangements (outside of agreed TOC/Network Rail connection policies)",
+   "abbreviation": "AUTH CON"
+  },
+  "RL": {
+   "cause": "Special Stop Orders authorised by TOC Control (including any delay at point of issue)",
+   "abbreviation": "AUTH SSO"
+  },
+  "RM": {
+   "cause": "Waiting connections from other transport modes – not authorised by TOC Control",
+   "abbreviation": "XTNL UNAUT"
+  },
+  "RP": {
+   "cause": "Passenger dropped object whilst boarding/alighting from train and train delayed at TOC request",
+   "abbreviation": "PASS DROP"
+  },
+  "RQ": {
+   "cause": "Un-booked assistance for a person with reduced mobility joining/alighting",
+   "abbreviation": "UBKD ASST"
+  },
+  "RR": {
+   "cause": "Loading or unloading reserved bicycles",
+   "abbreviation": "BIKE RSVD"
+  },
+  "RS": {
+   "cause": "Loading or unloading unreserved bicycles",
+   "abbreviation": "BIKE URSVD"
+  },
+  "RT": {
+   "cause": "Loading luggage",
+   "abbreviation": "LUGGAGE"
+  },
+  "RU": {
+   "cause": "Locating lost luggage",
+   "abbreviation": "LOST LUGG"
+  },
+  "RV": {
+   "cause": "Customer Information System failure",
+   "abbreviation": "PASS INFO"
+  },
+  "RW": {
+   "cause": "Station flooding (including issues with drains) not the result of weather, where the water has not emanated from Network Rail maintained infrastructure/network",
+   "abbreviation": "STN FLOOD"
+  },
+  "RX": {
+   "cause": "Station delays as a result of overcrowding due to unplanned events or incidents (e.g result of line or station closure) where causal event is not determined.",
+   "abbreviation": "UNPL EVENT"
+  },
+  "RY": {
+   "cause": "Mishap - Station operating causes",
+   "abbreviation": "STN MISHAP"
+  },
+  "RZ": {
+   "cause": "Other Station operating causes",
+   "abbreviation": "STN OTHER"
+  },
+  "T2": {
+   "cause": "Delay at unstaffed station to non-DOO train",
+   "abbreviation": "NONDOO STN"
+  },
+  "T3": {
+   "cause": "Waiting connections from other transport modes – authorised by TOC Control",
+   "abbreviation": "XTNL AUTH"
+  },
+  "T4": {
+   "cause": "Loading Supplies (including catering)",
+   "abbreviation": "SUPPLIES"
+  },
+  "T8": {
+   "cause": "Delay at unstaffed Station believed to be Operator cause and information required from Operator (Ops Responsibility)",
+   "abbreviation": "USTF UNEX"
+  },
+  "TA": {
+   "cause": "Train-crew/loco/stock/unit diagram issues other than in connection with emergency timetables",
+   "abbreviation": "DIAG ISSUE"
+  },
+  "TB": {
+   "cause": "Train cancelled or delayed as a result of ad hoc Train Operator Control requests or decisions",
+   "abbreviation": "TOC REQEST"
+  },
+  "TC": {
+   "cause": "Agreed mitigation resource plan (crew/stock) issues",
+   "abbreviation": "EMRG PLAN"
+  },
+  "TF": {
+   "cause": "Seat reservation problems",
+   "abbreviation": "SEAT RESVN"
+  },
+  "TG": {
+   "cause": "Driver",
+   "abbreviation": "TOC DRIVER"
+  },
+  "TH": {
+   "cause": "(Senior) Conductor/Train Manager",
+   "abbreviation": "T-MGR/COND"
+  },
+  "TI": {
+   "cause": "Train-crew rostering problem",
+   "abbreviation": "ROSTERING"
+  },
+  "TK": {
+   "cause": "Train catering staff (including Contractors)",
+   "abbreviation": "CATERING"
+  },
+  "TM": {
+   "cause": "Connection from other trains authorised by TOC Control but not part of a connection policy",
+   "abbreviation": "AUTH CONN"
+  },
+  "TN": {
+   "cause": "Late presentation from the continent",
+   "abbreviation": "LATE CHUNL"
+  },
+  "TO": {
+   "cause": "Time lost en-route believed to be Operator cause and information required from Operator (Ops Responsibility)",
+   "abbreviation": "LIR UNEX"
+  },
+  "TP": {
+   "cause": "Special Stop Orders",
+   "abbreviation": "AUTH SSO"
+  },
+  "TR": {
+   "cause": "Altered workings that have been requested by Train Operating Companies in advance",
+   "abbreviation": "TOC DIRECT"
+  },
+  "TS": {
+   "cause": "Delay due to incorrect ETCS system or equipment operation by Driver",
+   "abbreviation": "ETCS DVR"
+  },
+  "TT": {
+   "cause": "Autumn-attribution Neutral Zone delays (See Supplementary Autumn Attribution Guidance)",
+   "abbreviation": "LF NEUTRAL"
+  },
+  "TW": {
+   "cause": "Driver adhering to company professional driving standards or policy",
+   "abbreviation": "PRO DRIVER"
+  },
+  "TX": {
+   "cause": "Delays incurred on non-Network Rail running lines or networks including London Underground (except fleet related delays)",
+   "abbreviation": "OTH NETWK"
+  },
+  "TY": {
+   "cause": "Mishap-Train Operating Company cause",
+   "abbreviation": "TOC MISHAP"
+  },
+  "TZ": {
+   "cause": "Other Passenger Train Operating Company causes",
+   "abbreviation": "TOC OTHER"
+  },
+  "V8": {
+   "cause": "Train striking or being struck by a bird",
+   "abbreviation": "BIRDSTRIKE"
+  },
+  "VA": {
+   "cause": "Disorder, drunks or trespass",
+   "abbreviation": "DISORDER"
+  },
+  "VB": {
+   "cause": "Vandalism and or theft",
+   "abbreviation": "VANDALISM"
+  },
+  "VC": {
+   "cause": "Fatalities and or injuries sustained whilst on a platform as the result of being struck by a train or falling from a train",
+   "abbreviation": "FATALITIES"
+  },
+  "VD": {
+   "cause": "Passenger taken ill or incurring non-malicious injury",
+   "abbreviation": "ILL PASS"
+  },
+  "VE": {
+   "cause": "Ticket irregularities or refusals to pay",
+   "abbreviation": "TICKET IRR"
+  },
+  "VF": {
+   "cause": "Fire caused by vandalism",
+   "abbreviation": "VANDL FIRE"
+  },
+  "VG": {
+   "cause": "Police searching train",
+   "abbreviation": "POLICE-TRN"
+  },
+  "VH": {
+   "cause": "Passenger Communication cord, door egress or emergency train alarm operated",
+   "abbreviation": "PASS COMM"
+  },
+  "VI": {
+   "cause": "Security alert affecting stations and depots",
+   "abbreviation": "SEC ALERT"
+  },
+  "VR": {
+   "cause": "Driver adhering to company professional driving standards or policies during severe weather conditions that are not fleet related",
+   "abbreviation": "PRO DRIVER"
+  },
+  "VW": {
+   "cause": "Severe weather affecting passenger fleet equipment including following company standards/policies or Rule Book instructions",
+   "abbreviation": "SEV WEATHR"
+  },
+  "VX": {
+   "cause": "External events occurring on the LUL or other non NR running lines",
+   "abbreviation": "LUL CAUSES"
+  },
+  "VZ": {
+   "cause": "Other passenger or external causes the responsibility of TOC",
+   "abbreviation": "EXT OTHER"
+  },
+  "X1": {
+   "cause": "Visibility in semaphore signalled areas, or special working for fog and falling snow implemented by Network Rail – in all signalling areas (including special working for level crossing visibility)",
+   "abbreviation": "SPL WRKING"
+  },
+  "X2": {
+   "cause": "Severe flooding beyond that which could be mitigated on Network Rail infrastructure",
+   "abbreviation": "SEV FLOOD"
+  },
+  "X4": {
+   "cause": "Forecast or actual extreme winds, heat or rain requiring imposition of blanket speed restrictions or implementation of Key Route Strategy in accordance with Group Standards or other national operational safety instructions",
+   "abbreviation": "KRS / BLKT"
+  },
+  "X9": {
+   "cause": "Points failure caused by severe snow or ice where heaters are fitted and working as designed",
+   "abbreviation": "PNTS SNOW"
+  },
+  "XA": {
+   "cause": "Trespass (Including non-intentional)",
+   "abbreviation": "TRESPASS"
+  },
+  "XB": {
+   "cause": "Vandalism or theft (including the placing of objects on the line)",
+   "abbreviation": "VANDALS"
+  },
+  "XC": {
+   "cause": "Fatalities or injuries caused by being hit by train (Including non-intentional)",
+   "abbreviation": "FATALITIES"
+  },
+  "XE": {
+   "cause": "Fleet-related safety issues (including GSM-R calls) originating from outside of the Network",
+   "abbreviation": "NON-TAC"
+  },
+  "XI": {
+   "cause": "Security alert affecting the Network Rail Network (including line blocks taken for emergency services attending an off Network Rail network incident)",
+   "abbreviation": "SEC ALERT"
+  },
+  "XJ": {
+   "cause": "Asset failures caused by heat in external ambient air temperatures exceeding Network Rail design standards in the vicinity.",
+   "abbreviation": "ASSET HEAT"
+  },
+  "XK": {
+   "cause": "National Grid Power Supply Failure where local area is also affected (including outages, surges, blips where standby generator or UPS is installed and working)",
+   "abbreviation": "NATL GRID"
+  },
+  "XL": {
+   "cause": "Fire external to but directly affecting the Network Rail network (including line blocks taken for emergency services attending an incident not directly affecting the Network Rail network)",
+   "abbreviation": "EXTL FIRES"
+  },
+  "XM": {
+   "cause": "External utility incident including gas, water mains, overhead power lines or roadworks",
+   "abbreviation": "EX UTILITY"
+  },
+  "XN": {
+   "cause": "Road or Crossing related incidents including cars on the line, level crossing misuse and emergency services being prioritised over rail services (NOT bridge strikes)",
+   "abbreviation": "ROAD/XING"
+  },
+  "XO": {
+   "cause": "External trees, building or structures encroaching or falling onto Network Rail network infrastructure (not due to weather or vandalism) also including aircraft and airport safety or operational related incidents.",
+   "abbreviation": "EXT OBJECT"
+  },
+  "XP": {
+   "cause": "Bridge Strike",
+   "abbreviation": "BRIDGE HIT"
+  },
+  "XQ": {
+   "cause": "Swing bridge open for river or canal traffic",
+   "abbreviation": "BRIDGE OPN"
+  },
+  "XR": {
+   "cause": "Cable vandalism or theft",
+   "abbreviation": "CABLE VAND"
+  },
+  "XT": {
+   "cause": "Severe snow or ice affecting infrastructure which is the responsibility of Network Rail (including implementation of Key Route Strategy)",
+   "abbreviation": "SEV SNOW"
+  },
+  "XU": {
+   "cause": "Sunlight on signal or dispatch equipment where all reasonable mitigation has been taken",
+   "abbreviation": "SUN OBSCUR"
+  },
+  "XW": {
+   "cause": "High winds affecting infrastructure the responsibility of Network Rail including objects on the line due to the effect of weather",
+   "abbreviation": "HIGH WIND"
+  },
+  "YA": {
+   "cause": "Lost path - regulated for train running less late",
+   "abbreviation": "REG-ONTIME"
+  },
+  "YB": {
+   "cause": "Lost path - regulated for another later running train",
+   "abbreviation": "REG-LATE"
+  },
+  "YC": {
+   "cause": "Lost path - following train running less late",
+   "abbreviation": "FOL-ONTIME"
+  },
+  "YD": {
+   "cause": "Lost path - following another later running train",
+   "abbreviation": "FOL-LATE"
+  },
+  "YE": {
+   "cause": "Waiting path onto/from single line",
+   "abbreviation": "WTG S/LINE"
+  },
+  "YG": {
+   "cause": "Regulated in accordance with Regulation Policy",
+   "abbreviation": "REG INSTRC"
+  },
+  "YI": {
+   "cause": "Late arrival of booked inward stock (inward and outward trains are operated under the same Track Access Contract)",
+   "abbreviation": "INWD STOCK"
+  },
+  "YJ": {
+   "cause": "Late arrival of booked inward train-crew (where the inward and outward trains worked by that train-crew are operated under the same Track Access Contract)",
+   "abbreviation": "INWD CREW"
+  },
+  "YL": {
+   "cause": "Waiting passenger connections within connections policy, contingency plan or otherwise agreed by NR/TOC",
+   "abbreviation": "AUTHSD CON"
+  },
+  "YM": {
+   "cause": "Special stop orders within the contingency plan or agreed by NR/TOC",
+   "abbreviation": "AUTHSD SSO"
+  },
+  "YN": {
+   "cause": "Service Recovery- booked train crew, not available",
+   "abbreviation": "FIND CREW"
+  },
+  "YO": {
+   "cause": "Waiting platform/station congestion/platform alteration",
+   "abbreviation": "PLATFORM"
+  },
+  "YP": {
+   "cause": "Delays due to diversions from booked route or line",
+   "abbreviation": "DIVERSION"
+  },
+  "YQ": {
+   "cause": "Passenger overcrowding caused by a train being of short-formation",
+   "abbreviation": "SHRT FRMD"
+  },
+  "YR": {
+   "cause": "Tactical cancellation for service recovery not caused by late running",
+   "abbreviation": "SR CNCL"
+  },
+  "YT": {
+   "cause": "Reactionary delay to a train that is not leaving the network, by a train that is leaving the network",
+   "abbreviation": "NON NR INF"
+  },
+  "YU": {
+   "cause": "Service Recovery- booked rolling stock, not available",
+   "abbreviation": "UNIT SWAPS"
+  },
+  "YV": {
+   "cause": "Tactical intervention holding a train back at origin or at a strategic location en-route due to a line blocking incident on the train’s booked route",
+   "abbreviation": "HELD BACK"
+  },
+  "YX": {
+   "cause": "Passenger overcrowding caused by delay or cancellation of another train or its own late running",
+   "abbreviation": "OVER CRWD"
+  },
+  "ZS": {
+   "cause": "No cause ascertainable for a Sub Threshold Delay causing Threshold Reactionary (where agreed by both Parties)",
+   "abbreviation": "NOCAUSE AS"
+  },
+  "ZU": {
+   "cause": "No Cause Identified After Full Investigation by Both Parties (A ‘Full Investigation’ will be one including all avenues of investigation agreed as reasonable by both Parties)",
+   "abbreviation": "NOCAUSE ID"
+  },
+  "ZW": {
+   "cause": "Uninvestigated Cancellations System Roll-Ups only",
+   "abbreviation": "SYS CANC"
+  },
+  "ZX": {
+   "cause": "Uninvestigated Late Start System Roll-Ups only",
+   "abbreviation": "SYS L-STRT"
+  },
+  "ZY": {
+   "cause": "Uninvestigated Station Overtime System Roll-Up only",
+   "abbreviation": "SYS OTIME"
+  },
+  "ZZ": {
+   "cause": "Uninvestigated Loss in Running System Roll-Up only",
+   "abbreviation": "SYS LIR"
+  }
+ }
+}

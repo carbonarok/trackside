@@ -266,7 +266,10 @@ Each stop has `arrival`, `departure` or `pass` times. Each of those carries
 TRUST, Darwin or TD), `estimated` (Darwin's forecast, or projected from the
 latest delay), `delayMinutes` and `delayed` (late by an unknown amount). Stops
 also report `atPlatform`, and platforms carry `confirmed`. Services include
-`lateReason` and `cancelReason` text when Darwin gives them.
+`lateReason` and `cancelReason` text when Darwin gives them. A cancelled
+service also gets `cancelReasonCode`, the TRUST delay attribution code (for
+example `IA`), and `cancelReasonCodeDescription`, the industry description of
+that code ("Signal failure (including no fault found)").
 
 ### Realtime Trains–compatible endpoints
 
@@ -294,8 +297,9 @@ Known differences from the original:
 
 - Association data is not given.
 - `serviceLocation` only reports `AT_PLAT`, not the approach states.
-- Cancellation reason text comes from Darwin. Without Darwin there's only
-  `cancelReasonCode`.
+- Cancellation reason text comes from Darwin. Without Darwin it falls back to
+  the industry description of the TRUST delay code, which is less
+  passenger-friendly.
 
 This project has no connection with Realtime Trains. It uses none of their
 data or services and only copies the JSON layout so clients can migrate.
@@ -355,7 +359,7 @@ VSTP train. It then replays TRUST messages and checks both APIs.
 - [ ] **Run against the live feeds** and fix whatever real data turns up
 - [ ] Darwin associations (joins and divides) and station messages (`OW`)
 - [ ] "Approaching" states from TD berth offsets
-- [ ] Cancellation reason text from the delay attribution codes when there's
+- [x] Cancellation reason text from the delay attribution codes when there's
   no Darwin
 - [ ] OpenAPI spec, rate limiting and response caching for public instances.
 
@@ -371,6 +375,11 @@ If you run a public instance, you must credit the data sources:
   must credit NRE as the source ("Powered by National Rail Enquiries"), keep
   forecasts consistent with Darwin, and show time-bound data such as platforms
   only when the feed allows.
+
+The delay code descriptions in `internal/trust/delay_codes.json` come from
+Section S of the
+[Delay Attribution Principles and Rules](https://www.networkrail.co.uk/wp-content/uploads/2025/06/April-2025-DAPR.pdf)
+(April 2025), published by the Delay Attribution Board.
 
 Check the current terms yourself before you run a public service.
 

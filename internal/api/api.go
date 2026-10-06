@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/carbonarok/trackside/internal/timetable"
+	"github.com/carbonarok/trackside/internal/trust"
 	"github.com/carbonarok/trackside/internal/ukrail"
 )
 
@@ -117,6 +118,9 @@ type ServiceSummary struct {
 	Origin       []Endpoint `json:"origin"`
 	Destination  []Endpoint `json:"destination"`
 	CancelReason string     `json:"cancelReasonCode,omitempty"`
+	// CancelReasonCodeDescription explains cancelReasonCode, a TRUST delay
+	// attribution code, in industry terms.
+	CancelReasonCodeDescription string `json:"cancelReasonCodeDescription,omitempty"`
 	// Darwin's passenger-facing explanations.
 	CancelReasonText string `json:"cancelReason,omitempty"`
 	LateReasonText   string `json:"lateReason,omitempty"`
@@ -313,6 +317,9 @@ func summary(svc *timetable.Service) ServiceSummary {
 		PlannedCancel:    svc.PlannedCancel,
 		Origin:           []Endpoint{},
 		Destination:      []Endpoint{},
+	}
+	if c, ok := trust.LookupDelayCode(svc.CancelReason); ok {
+		sum.CancelReasonCodeDescription = c.Cause
 	}
 	if svc.ATOCCode != "" && svc.ATOCCode != "ZZ" {
 		name := svc.OperatorName
