@@ -114,3 +114,15 @@ func TestStationMessageJSON(t *testing.T) {
 		t.Errorf("text = %q", text)
 	}
 }
+
+func TestBarePlatformString(t *testing.T) {
+	// Darwin renders a platform without attributes as a plain string.
+	body := `{"bytes":"{\"ts\":\"2026-10-06T14:00:00+01:00\",\"version\":\"18.0\",\"uR\":{\"TS\":{\"rid\":\"1\",\"uid\":\"W1\",\"ssd\":\"2026-10-06\",\"Location\":{\"tpl\":\"CLPHMJN\",\"wtd\":\"14:00\",\"dep\":{\"et\":\"14:02\"},\"plat\":\"7\"}}}}"}`
+	p, err := DecodeRecord([]byte(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plat := p.UR.TrainStatus[0].Locations[0].Plat; plat == nil || plat.Number != "7" || plat.Suppressed() {
+		t.Errorf("plat = %+v", plat)
+	}
+}

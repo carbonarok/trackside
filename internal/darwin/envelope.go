@@ -126,8 +126,14 @@ type jPlat struct {
 }
 
 // UnmarshalJSON reads the platform number from the "" key, which struct
-// tags cannot name.
+// tags cannot name, or from a bare string.
 func (p *jPlat) UnmarshalJSON(b []byte) error {
+	// A platform with no attributes is rendered as a bare string.
+	var num string
+	if err := json.Unmarshal(b, &num); err == nil {
+		*p = jPlat{Number: num}
+		return nil
+	}
 	var m map[string]any
 	if err := json.Unmarshal(b, &m); err != nil {
 		return err

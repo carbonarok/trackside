@@ -44,20 +44,33 @@ func isKafkaAuthError(err error) bool {
 // after records are handled, so a restart resumes where it left off (within
 // the broker's retention).
 func (c KafkaConfig) Consume(ctx context.Context, h Handler) error {
-	client, err := kgo.NewClient(
+	client, err := c.newClient()
+	if err != nil {
+		return fmt.Errorf("kafka client: %w", err)
+	}
+	defer client.Close()
+	return c.poll(ctx, client, h)
+}
+
+// newClient builds the client. It does not connect until first used.
+func (c KafkaConfig) newClient() (*kgo.Client, error) {
+	return kgo.NewClient(
 		kgo.SeedBrokers(c.Bootstrap),
-		kgo.DialTLSConfig(&tls.Config{MinVersion: tls.VersionTLS12}),
-		kgo.Dialer((&net.Dialer{Timeout: 10 * time.Second}).DialContext),
+		// franz-go takes either a TLS config or a dialer, not both, so the TLS
+		// settings live in the dialer.
+		kgo.Dialer((&tls.Dialer{
+			NetDialer: &net.Dialer{Timeout: 10 * time.Second},
+			Config:    &tls.Config{MinVersion: tls.VersionTLS12},
+		}).DialContext),
 		kgo.SASL(plain.Auth{User: c.Username, Pass: c.Password}.AsMechanism()),
 		kgo.ConsumerGroup(c.Group),
 		kgo.ConsumeTopics(c.Topic),
 		kgo.ConsumeResetOffset(kgo.NewOffset().AtEnd()),
 		kgo.DisableAutoCommit(),
 	)
-	if err != nil {
-		return fmt.Errorf("kafka client: %w", err)
-	}
-	defer client.Close()
+}
+
+func (c KafkaConfig) poll(ctx context.Context, client *kgo.Client, h Handler) error {
 	slog.Info("consuming", "topic", c.Topic)
 	for {
 		fetches := client.PollFetches(ctx)
