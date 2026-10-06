@@ -94,7 +94,11 @@ func (s *Service) applyDarwinActuals() {
 		}
 		p.ArrCancelled = p.ArrCancelled || d.ArrCancelled
 		p.DepCancelled = p.DepCancelled || d.DepCancelled
-		if d.Platform != "" {
+		// A suppressed platform is one National Rail isn't showing passengers
+		// yet, usually at big termini so people don't crowd the platform
+		// before it's announced. Keep Darwin's value back, but the booked
+		// platform from the timetable is public and still stands.
+		if d.Platform != "" && !d.PlatformSuppressed {
 			p.ActualPlatform = d.Platform
 			p.PlatformConfirmed = d.PlatformConfirmed
 		}

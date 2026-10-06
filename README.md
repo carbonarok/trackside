@@ -33,7 +33,7 @@ own copy for free, with their own feed credentials.
   cancellations, reinstatements, and changes of origin or identity. Delays are
   carried forward to estimate times at later stops.
 - **Darwin forecasts** from National Rail: estimated times, live platforms
-  (hidden while Darwin suppresses them), cancellations, and readable delay and
+  (only the booked platform shows while National Rail suppresses the live one), cancellations, and readable delay and
   cancellation reasons. Darwin's estimates replace trackside's own wherever it
   has them.
 - **Station messages** from Darwin: the disruption and information notices

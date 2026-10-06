@@ -5,7 +5,7 @@
       <ns5:LateReason>104</ns5:LateReason>
       <ns5:Location tpl="WATRLMN" wtd="08:30" ptd="08:30">
         <ns5:dep at="08:33" src="TD" />
-        <ns5:plat platsup="true" conf="true">7</ns5:plat>
+        <ns5:plat platsup="true" conf="true">7B</ns5:plat>
       </ns5:Location>
       <ns5:Location tpl="CLPHMJN" wta="08:36" wtd="08:37" pta="08:36" ptd="08:37">
         <ns5:arr et="08:40" src="Darwin" />

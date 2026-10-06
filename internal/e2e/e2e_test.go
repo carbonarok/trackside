@@ -393,8 +393,9 @@ func TestPipeline(t *testing.T) {
 		var d api.ServiceDetail
 		get(t, srv, "/v1/services/W10004/2026-10-06", &d)
 		wat, clj, wok := d.Stops[0], d.Stops[1], d.Stops[2]
-		if wat.Platform != nil {
-			t.Errorf("suppressed platform shown at WAT: %+v", wat.Platform)
+		// Darwin's suppressed 7B stays hidden; the booked 7 still shows.
+		if p := wat.Platform; p == nil || p.Planned != "7" || p.Actual != "" || !p.Suppressed || p.Confirmed {
+			t.Errorf("suppressed platform at WAT = %+v, want booked 7 only", p)
 		}
 		if wat.Departure.Actual == nil || wat.Departure.Actual.Format("15:04") != "08:33" {
 			t.Errorf("Darwin actual not used at WAT: %+v", wat.Departure)

@@ -30,6 +30,8 @@ export interface Platform {
   actual?: string
   changed: boolean
   confirmed: boolean
+  /** National Rail hasn't announced it yet; only the booked platform is given. */
+  suppressed?: boolean
 }
 
 export interface Stop extends Location {

@@ -413,14 +413,12 @@ func locationDetail(svc *timetable.Service, i int) LocationDetail {
 		d.RealtimePass, d.RealtimePassActual = t.Format("1504"), actual
 	}
 
-	if !p.PlatformSuppressed {
-		d.Platform = p.Platform
-		if p.ActualPlatform != "" {
-			d.PlatformChanged = p.Platform != "" && p.ActualPlatform != p.Platform
-			d.Platform = p.ActualPlatform
-		}
-		d.PlatformConfirmed = p.PlatformConfirmed
+	d.Platform = p.Platform
+	if p.ActualPlatform != "" {
+		d.PlatformChanged = timetable.PlatformChanged(p.Platform, p.ActualPlatform)
+		d.Platform = p.ActualPlatform
 	}
+	d.PlatformConfirmed = p.PlatformConfirmed
 	if p.Cancelled() || p.ArrCancelled || p.DepCancelled {
 		d.CancelReasonCode = svc.CancelReason
 		d.CancelReasonLongText = svc.CancelReasonText

@@ -114,7 +114,7 @@ type Stop struct {
 	TerminatesHere bool // last served stop after a part cancellation
 	ArrDelayed     bool // late by an unknown amount
 	DepDelayed     bool
-	// Platform display state. A suppressed platform must not be shown.
+	// Platform display state. Darwin's platform is not used while suppressed.
 	PlatformConfirmed  bool
 	PlatformSuppressed bool
 	// AtPlatform means the train has arrived here and not yet departed.
@@ -628,4 +628,16 @@ func (st *Store) SearchServices(ctx context.Context, q string, runDate time.Time
 		}
 	}
 	return out, nil
+}
+
+// PlatformChanged reports whether a live platform differs from the booked
+// one. A platform section isn't a change: 12B is the B end of platform 12.
+func PlatformChanged(booked, live string) bool {
+	if booked == "" || live == "" || booked == live {
+		return false
+	}
+	section := func(whole, part string) bool {
+		return len(part) == len(whole)+1 && strings.HasPrefix(part, whole) && part[len(whole)] >= 'A' && part[len(whole)] <= 'Z'
+	}
+	return !section(booked, live) && !section(live, booked)
 }

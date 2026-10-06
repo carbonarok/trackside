@@ -243,13 +243,14 @@ type Times struct {
 	Cancelled bool `json:"cancelled,omitempty"`
 }
 
-// Platform is the booked and live platform. It is omitted entirely while
-// Darwin has the platform suppressed.
+// Platform is the booked and live platform. While Darwin has the platform
+// suppressed, its live platform is held back and only the booked one shows.
 type Platform struct {
-	Planned   string `json:"planned,omitempty"`
-	Actual    string `json:"actual,omitempty"`
-	Changed   bool   `json:"changed"`
-	Confirmed bool   `json:"confirmed"`
+	Planned    string `json:"planned,omitempty"`
+	Actual     string `json:"actual,omitempty"`
+	Changed    bool   `json:"changed"`
+	Confirmed  bool   `json:"confirmed"`
+	Suppressed bool   `json:"suppressed,omitempty"`
 }
 
 func (s *Server) board(arrivals bool) http.HandlerFunc {
@@ -484,12 +485,13 @@ func stop(svc *timetable.Service, i int) Stop {
 			out.Departure.Delayed = p.DepDelayed
 		}
 	}
-	if (p.Platform != "" || p.ActualPlatform != "") && !p.PlatformSuppressed {
+	if p.Platform != "" || p.ActualPlatform != "" {
 		out.Platform = &Platform{
-			Planned:   p.Platform,
-			Actual:    p.ActualPlatform,
-			Changed:   p.ActualPlatform != "" && p.Platform != "" && p.ActualPlatform != p.Platform,
-			Confirmed: p.PlatformConfirmed,
+			Planned:    p.Platform,
+			Actual:     p.ActualPlatform,
+			Changed:    timetable.PlatformChanged(p.Platform, p.ActualPlatform),
+			Confirmed:  p.PlatformConfirmed,
+			Suppressed: p.PlatformSuppressed,
 		}
 	}
 	return out

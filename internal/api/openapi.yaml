@@ -355,13 +355,19 @@ components:
 
     Platform:
       type: object
-      description: Omitted entirely while Darwin has the platform suppressed.
       required: [changed, confirmed]
       properties:
-        planned: { type: string }
+        planned: { type: string, description: Booked platform from the timetable. }
         actual: { type: string, description: Live platform from Darwin, TRUST or TD. }
         changed: { type: boolean }
         confirmed: { type: boolean }
+        suppressed:
+          type: boolean
+          description: >-
+            National Rail isn't showing this platform to passengers yet, usually at a
+            big station until it's announced. Darwin's live platform is held back, so
+            only the booked platform (and any platform already reported by TRUST or
+            TD) is given.
 
     Stop:
       allOf:

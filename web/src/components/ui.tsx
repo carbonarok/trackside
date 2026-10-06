@@ -23,7 +23,15 @@ export function PlatformSign({ stop }: { stop: Stop }) {
     <span
       className={`platform${changed ? ' platform-changed' : ''}${stop.platform?.confirmed ? '' : ' platform-unconfirmed'}`}
       aria-label={`Platform ${p}${changed ? `, changed from ${stop.platform?.planned}` : ''}`}
-      title={changed ? `Changed from platform ${stop.platform?.planned}` : stop.platform?.confirmed ? 'Confirmed' : 'Planned'}
+      title={
+        changed
+          ? `Changed from platform ${stop.platform?.planned}`
+          : stop.platform?.confirmed
+            ? 'Confirmed'
+            : stop.platform?.suppressed
+              ? 'Booked platform. The station hasn’t announced it yet, so it may change.'
+              : 'Booked platform'
+      }
     >
       {p}
     </span>
