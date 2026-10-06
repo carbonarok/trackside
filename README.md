@@ -144,6 +144,14 @@ trackside stops retrying until you restart it.
    trackside import-darwin-ref 20261006020500_ref_v4.xml.gz
    ```
 
+**Timetable and reference files from the Rail Data Marketplace.** The
+marketplace offers SCHEDULE ("NWR Schedule"), CORPUS ("NWR CORPUS"), SMART
+("NWR SMART") and Darwin reference data ("Darwin Timetable Files") as file
+products. You can download them by hand from each product's **Data files**
+tab and import them with `import-schedule FILE` and so on. To keep the
+timetable current automatically, have the marketplace deliver them to an
+[inbox](#automatic-file-delivery-inbox) instead.
+
 **Network Rail feeds through the Rail Data Marketplace.** The marketplace
 also carries Network Rail's feeds over Kafka. This is useful if Network
 Rail's platform is full. Subscribe to the Train Movements, VSTP or TD
@@ -179,6 +187,53 @@ reasons and station messages:
   service answers.
 - **Precedence:** if the Darwin Push Port is configured too, it takes over and
   Darwin Lite isn't used.
+
+### Automatic file delivery (inbox)
+
+trackside can watch a folder or cloud bucket and import whatever the Rail
+Data Marketplace delivers there:
+
+- **Which files:** CORPUS, SMART, Darwin reference data and SCHEDULE.
+- **Timetable order:** updates are applied in sequence. If there's no
+  timetable yet, or an update is missing, the newest full file is used.
+- **Bookkeeping:** each file is imported once. CIF-format copies and
+  unrelated files are ignored.
+- **When:** every 15 minutes (`INBOX_INTERVAL`), or on demand with
+  `trackside import-inbox`.
+
+The marketplace can deliver to Amazon S3, Google Cloud Storage, Azure Blob
+Storage or an SFTP server you run. **Google Cloud Storage is the free
+option.** Its Always Free tier gives 5 GB of storage and 100 GB of downloads a
+month with no time limit, though it needs a billing account (a card) on the
+Google Cloud project.
+
+1. **Create the bucket.** In the [Google Cloud console](https://console.cloud.google.com/storage),
+   create a bucket: Region `us-central1`, `us-east1` or `us-west1` (the free
+   tier regions), Standard storage class.
+2. **Stop it filling up.** Under the bucket's **Lifecycle** tab, add a rule
+   to delete objects older than 7 days.
+3. **Add it as a destination in the marketplace.** Go to **Manage → My file
+   transfers → Add file destination**, choose Google Cloud Storage and enter
+   the bucket name. The form shows the marketplace's service accounts. On the
+   bucket's **Permissions** tab, grant them Storage Object Viewer, Storage
+   Legacy Bucket Reader, Storage Bucket Viewer and Storage Legacy Bucket
+   Writer. Then **Validate** and **Submit**.
+4. **Point each product at it.** On each product's **Data files → File
+   transfers** tab, choose the destination: NWR Schedule, NWR CORPUS, NWR
+   SMART and Darwin Timetable Files.
+5. **Give trackside read access.** Under **Cloud Storage → Settings →
+   Interoperability**, create an HMAC key for a service account that has
+   Storage Object Viewer on the bucket. Then:
+
+   ```bash
+   INBOX_BUCKET=gs://your-bucket
+   INBOX_ACCESS_KEY=GOOG1E...
+   INBOX_SECRET_KEY=...
+   ```
+
+For SFTP delivery, or files you download by hand, point `INBOX_DIR` at the
+folder instead. A dedicated folder is best, but a busy one such as Downloads
+also works, because unrecognised files are ignored.
 
 ### 3. Run it
 
@@ -257,6 +312,11 @@ precedence over it.
 | `RDM_<FEED>_USERNAME`, `_PASSWORD`, `_GROUP` | | Rail Data Marketplace subscription for `<FEED>`: `DARWIN`, `TRUST`, `VSTP` or `TD`. Copy the values from the product's Pub/Sub tab. |
 | `RDM_<FEED>_TOPIC` | see below | Override the topic |
 | `RDM_BOOTSTRAP` | `pkc-z3p1v0.europe-west2.gcp.confluent.cloud:9092` | Kafka bootstrap server |
+| `INBOX_DIR` | | Folder to import delivered files from |
+| `INBOX_BUCKET` | | `gs://bucket/prefix` or `s3://bucket/prefix` to import delivered files from |
+| `INBOX_ACCESS_KEY`, `INBOX_SECRET_KEY` | | HMAC (Google Cloud Storage) or access keys (S3) for `INBOX_BUCKET` |
+| `INBOX_ENDPOINT` | provider default | Override the bucket's S3 endpoint |
+| `INBOX_INTERVAL` | `15m` | How often to check the inbox |
 | `NRE_LDBWS_TOKEN` | | Darwin Lite developer token (see [Darwin Lite](#alternative-darwin-lite)). Ignored when the Darwin Push Port is configured. |
 | `NRE_LDBWS_URL` | `https://lite.realtime.nationalrail.co.uk/OpenLDBWS/ldb12.asmx` | Darwin Lite endpoint |
 | `LISTEN_ADDR` | `:8080` | |
@@ -391,6 +451,9 @@ data or services and only copies the JSON layout so clients can migrate.
 - **Live data is keyed by stop position.** It also records the TIPLOC, so if a
   schedule changes while the train runs, the data is re-attached to the right
   stop.
+- **Restarts:** trains that TRUST activated before trackside started are
+  picked up from their first movement. The headcode and start day in the
+  TRUST train ID, plus the location and planned time, identify the service.
 - **TD steps** are matched to a service by headcode, the SMART location and
   the nearest working time, preferring trains TRUST has activated.
 - **Approaching** means the train has stepped into the berth that a SMART
