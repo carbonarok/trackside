@@ -248,6 +248,7 @@ func (s *Server) board(arrivals bool) http.HandlerFunc {
 			To:       from.Add(time.Duration(window) * time.Minute),
 			Arrivals: arrivals,
 			Passes:   q.Get("passes") == "true",
+			CRS:      locs[0].CRS,
 		}
 		for _, l := range locs {
 			bq.TIPLOCs = append(bq.TIPLOCs, l.TIPLOC)

@@ -23,6 +23,9 @@ type Store struct {
 	Pool *pgxpool.Pool
 	// Now is the clock used to expire stale live state; tests override it.
 	Now func() time.Time
+	// Live optionally supplies on-demand live data (Darwin Lite) for boards
+	// and service detail. Data already held from the Darwin stream wins.
+	Live LiveSource
 }
 
 func (st *Store) now() time.Time {
@@ -193,6 +196,9 @@ type BoardQuery struct {
 	Arrivals bool
 	Passes   bool     // include trains passing without stopping
 	Calling  []string // when set, only trains that later (or, for arrivals, earlier) call at one of these TIPLOCs
+	// CRS is the station's CRS code, used to fetch live data when a live
+	// source is configured.
+	CRS string
 }
 
 // BoardEntry is a service and the index of the queried location in its stops.
@@ -249,7 +255,7 @@ func (st *Store) Board(ctx context.Context, q BoardQuery) ([]BoardEntry, error) 
 	for _, h := range hits {
 		ids = append(ids, h.id)
 	}
-	services, err := st.load(ctx, ids)
+	services, err := st.loadRaw(ctx, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -273,6 +279,10 @@ func (st *Store) Board(ctx context.Context, q BoardQuery) ([]BoardEntry, error) 
 		}
 		out = append(out, BoardEntry{Service: svc, Index: idx})
 	}
+	if st.Live != nil && q.CRS != "" {
+		st.enrichBoard(ctx, q, out)
+	}
+	st.finish(services)
 	sort.SliceStable(out, func(i, j int) bool {
 		return out[i].sortTime(q.Arrivals).Before(out[j].sortTime(q.Arrivals))
 	})
@@ -361,19 +371,47 @@ func (st *Store) Service(ctx context.Context, uid string, runDate time.Time) (*S
 	if err != nil {
 		return nil, err
 	}
-	m, err := st.load(ctx, []int64{id})
+	m, err := st.loadRaw(ctx, ids1(id))
 	if err != nil {
 		return nil, err
 	}
-	if m[id] == nil {
+	svc := m[id]
+	if svc == nil {
 		return nil, ErrNotFound
 	}
-	return m[id], nil
+	if st.Live != nil {
+		st.enrichService(ctx, svc)
+	}
+	st.finish(m)
+	return svc, nil
 }
+
+func ids1(id int64) []int64 { return []int64{id} }
 
 // load fetches services with their stops and live events, then derives
 // cancellations and estimates.
 func (st *Store) load(ctx context.Context, ids []int64) (map[int64]*Service, error) {
+	out, err := st.loadRaw(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	st.finish(out)
+	return out, nil
+}
+
+// finish derives cancellations, estimates and positions once all live data
+// is attached.
+func (st *Store) finish(services map[int64]*Service) {
+	now := st.now()
+	for _, s := range services {
+		s.annotate()
+		s.applyApproach(now)
+	}
+}
+
+// loadRaw fetches services with their stops and stored live data, without
+// deriving anything.
+func (st *Store) loadRaw(ctx context.Context, ids []int64) (map[int64]*Service, error) {
 	out := make(map[int64]*Service, len(ids))
 	if len(ids) == 0 {
 		return out, nil
@@ -537,11 +575,6 @@ func (st *Store) load(ctx context.Context, ids []int64) (map[int64]*Service, err
 			}
 			s.Stops[i].Darwin = f.d
 		}
-	}
-	now := st.now()
-	for _, s := range out {
-		s.annotate()
-		s.applyApproach(now)
 	}
 	return out, nil
 }

@@ -24,6 +24,7 @@ import (
 	"github.com/carbonarok/trackside/internal/darwin"
 	"github.com/carbonarok/trackside/internal/db"
 	"github.com/carbonarok/trackside/internal/feeds"
+	"github.com/carbonarok/trackside/internal/ldb"
 	"github.com/carbonarok/trackside/internal/schedule"
 	"github.com/carbonarok/trackside/internal/td"
 	"github.com/carbonarok/trackside/internal/timetable"
@@ -302,6 +303,13 @@ func importSchedule(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config, ar
 
 func serve(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config) error {
 	store := &timetable.Store{Pool: pool}
+	darwinStream := kafkaConfig("DARWIN", "prod-1010-Darwin-Train-Information-Push-Port-IIII2_0-JSON")
+	if token := os.Getenv("NRE_LDBWS_TOKEN"); token != "" && !darwinStream.Enabled() {
+		lite := ldb.New(token)
+		lite.URL = os.Getenv("NRE_LDBWS_URL")
+		store.Live = lite
+		slog.Info("using Darwin Lite for live boards (on demand, cached)")
+	}
 	mux := http.NewServeMux()
 	(&api.Server{Store: store}).Register(mux)
 	(&compat.Server{Store: store}).Register(mux)
@@ -351,10 +359,11 @@ func serve(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config) error {
 		}
 	}
 	darwinApplier := &darwin.Applier{Pool: pool}
-	if k := kafkaConfig("DARWIN", "prod-1010-Darwin-Train-Information-Push-Port-IIII2_0-JSON"); k.Enabled() {
-		go consumeKafka(ctx, "Darwin", k, darwinApplier.ApplyMessage)
-	} else {
-		slog.Info("Darwin not configured (RDM_DARWIN_*); using TRUST-based estimates only")
+	switch {
+	case darwinStream.Enabled():
+		go consumeKafka(ctx, "Darwin", darwinStream, darwinApplier.ApplyMessage)
+	case store.Live == nil:
+		slog.Info("Darwin not configured (RDM_DARWIN_* or NRE_LDBWS_TOKEN); using TRUST-based estimates only")
 	}
 
 	srv := &http.Server{

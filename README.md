@@ -67,6 +67,7 @@ providers approve accounts by hand. Request them first.
 | TRUST (Train Movements) | Live actual times, cancellations | Network Rail | Recommended |
 | VSTP | Trains added at short notice | Network Rail | Recommended |
 | Darwin Push Port | Forecasts, live platforms, delay reasons | Rail Data Marketplace | Recommended |
+| Darwin Lite (OpenLDBWS) | The same forecasts, on demand, one station at a time | National Rail | Optional, if you lack the Push Port |
 | Darwin reference data | Proper station names, reason texts | Rail Data Marketplace | Optional |
 | TD (Train Describer) + SMART | Earlier times, train positions | Network Rail | Optional |
 
@@ -153,6 +154,32 @@ The marketplace delivers SCHEDULE, CORPUS and SMART as files to your own
 storage too. Load them with `import-schedule FILE`, `import-corpus FILE` and
 `import-smart FILE`.
 
+### Alternative: Darwin Lite
+
+If you don't have the Darwin Push Port, or are still waiting for approval, a
+**Darwin Lite** token gives you the same Darwin forecasts on demand. Darwin
+Lite is National Rail's OpenLDBWS (Live Departure Boards Web Service). There's
+no login: the developer token from the registration email is the credential.
+
+```bash
+NRE_LDBWS_TOKEN=<your token>
+```
+
+When someone asks for a board, trackside fetches that station's live board
+from Darwin Lite and merges in expected times, platforms, cancellations,
+reasons and station messages:
+
+- **Caching and rate limit:** each station is cached for a minute. trackside
+  stays under 4,500 requests an hour, below the free tier's cap of 5,000.
+- **Matching:** Darwin Lite has no train UIDs, so trains are matched on booked
+  time, origin, destination and operator.
+- **Service detail:** once a train has appeared on a fetched board, its
+  service detail is live along the whole route.
+- **Coverage:** only from 2 hours ago to 4 hours ahead, since that's what the
+  service answers.
+- **Precedence:** if the Darwin Push Port is configured too, it takes over and
+  Darwin Lite isn't used.
+
 ### 3. Run it
 
 With Docker:
@@ -230,6 +257,8 @@ precedence over it.
 | `RDM_<FEED>_USERNAME`, `_PASSWORD`, `_GROUP` | | Rail Data Marketplace subscription for `<FEED>`: `DARWIN`, `TRUST`, `VSTP` or `TD`. Copy the values from the product's Pub/Sub tab. |
 | `RDM_<FEED>_TOPIC` | see below | Override the topic |
 | `RDM_BOOTSTRAP` | `pkc-z3p1v0.europe-west2.gcp.confluent.cloud:9092` | Kafka bootstrap server |
+| `NRE_LDBWS_TOKEN` | | Darwin Lite developer token (see [Darwin Lite](#alternative-darwin-lite)). Ignored when the Darwin Push Port is configured. |
+| `NRE_LDBWS_URL` | `https://lite.realtime.nationalrail.co.uk/OpenLDBWS/ldb12.asmx` | Darwin Lite endpoint |
 | `LISTEN_ADDR` | `:8080` | |
 | `LOG_LEVEL` | `info` | `debug` logs every request |
 
@@ -357,7 +386,8 @@ data or services and only copies the JSON layout so clients can migrate.
   `origin_dep_timestamp`, because `tp_origin_timestamp` is wrong for trains
   starting just after midnight in BST.
 - **Precedence** for actual times: TRUST, then Darwin, then TD. For estimates,
-  Darwin's forecast beats trackside's projection.
+  Darwin's forecast beats trackside's projection. Darwin Lite data is treated
+  as Darwin, but only fills stops the Darwin stream hasn't covered.
 - **Live data is keyed by stop position.** It also records the TIPLOC, so if a
   schedule changes while the train runs, the data is re-attached to the right
   stop.

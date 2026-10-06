@@ -101,7 +101,7 @@ func (s *Server) search(w http.ResponseWriter, r *http.Request) {
 		lookupError(w, err)
 		return
 	}
-	q := timetable.BoardQuery{Arrivals: req.arrivals}
+	q := timetable.BoardQuery{Arrivals: req.arrivals, CRS: locs[0].CRS}
 	switch {
 	case req.date == nil:
 		now := s.now()

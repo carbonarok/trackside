@@ -31,7 +31,7 @@ import (
 
 var runDate = time.Date(2026, 10, 6, 0, 0, 0, 0, time.UTC) // a Tuesday
 
-func setup(t *testing.T) (*pgxpool.Pool, *httptest.Server) {
+func setup(t *testing.T, opts ...func(*timetable.Store)) (*pgxpool.Pool, *httptest.Server) {
 	t.Helper()
 	url := os.Getenv("TEST_DATABASE_URL")
 	if url == "" {
@@ -66,6 +66,9 @@ func setup(t *testing.T) (*pgxpool.Pool, *httptest.Server) {
 
 	now := func() time.Time { return time.Date(2026, 10, 6, 8, 0, 0, 0, ukrail.London) }
 	store := &timetable.Store{Pool: pool, Now: now}
+	for _, o := range opts {
+		o(store)
+	}
 	mux := http.NewServeMux()
 	(&api.Server{Store: store, Now: now}).Register(mux)
 	(&compat.Server{Store: store, Now: now}).Register(mux)
