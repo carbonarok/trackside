@@ -96,7 +96,9 @@ type Stop struct {
 	ActualDep      *time.Time
 	ActualPass     *time.Time
 	ActualPlatform string
-	Darwin         *DarwinForecast
+	// Where each actual time came from: TRUST, TD or Darwin.
+	ActualArrSource, ActualDepSource, ActualPassSource string
+	Darwin                                             *DarwinForecast
 
 	// Derived by annotate.
 	EstArr         *time.Time
@@ -388,6 +390,20 @@ func (st *Store) Service(ctx context.Context, uid string, runDate time.Time) (*S
 
 func ids1(id int64) []int64 { return []int64{id} }
 
+// ServiceIDs returns the services running on a date.
+func (st *Store) ServiceIDs(ctx context.Context, runDate time.Time) ([]int64, error) {
+	rows, err := st.Pool.Query(ctx, `SELECT id FROM services WHERE run_date = $1 AND schedule_id IS NOT NULL ORDER BY id`, runDate)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[int64])
+}
+
+// Load returns services by id with live data merged and annotated.
+func (st *Store) Load(ctx context.Context, ids []int64) (map[int64]*Service, error) {
+	return st.load(ctx, ids)
+}
+
 // load fetches services with their stops and live events, then derives
 // cancellations and estimates.
 func (st *Store) load(ctx context.Context, ids []int64) (map[int64]*Service, error) {
@@ -485,16 +501,17 @@ func (st *Store) loadRaw(ctx context.Context, ids []int64) (map[int64]*Service, 
 		seq           int
 		tiploc, event string
 		platform      string
+		source        string
 		actual        time.Time
 	}
 	rows, err = st.Pool.Query(ctx, `SELECT service_id, seq, COALESCE(tiploc, ''), event, actual,
-		COALESCE(platform, '') FROM service_events WHERE service_id = ANY($1)`, ids)
+		COALESCE(platform, ''), source FROM service_events WHERE service_id = ANY($1)`, ids)
 	if err != nil {
 		return nil, err
 	}
 	events, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (eventRow, error) {
 		var e eventRow
-		err := r.Scan(&e.id, &e.seq, &e.tiploc, &e.event, &e.actual, &e.platform)
+		err := r.Scan(&e.id, &e.seq, &e.tiploc, &e.event, &e.actual, &e.platform, &e.source)
 		return e, err
 	})
 	if err != nil {
@@ -513,20 +530,21 @@ func (st *Store) loadRaw(ctx context.Context, ids []int64) (map[int64]*Service, 
 			p := &s.Stops[i]
 			a := e.actual.In(ukrail.London)
 			var slot **time.Time
+			var src *string
 			switch e.event {
 			case "arr":
-				slot = &p.ActualArr
+				slot, src = &p.ActualArr, &p.ActualArrSource
 			case "dep":
-				slot = &p.ActualDep
+				slot, src = &p.ActualDep, &p.ActualDepSource
 			case "pass":
-				slot = &p.ActualPass
+				slot, src = &p.ActualPass, &p.ActualPassSource
 			default:
 				continue
 			}
 			if !exact && *slot != nil {
 				continue
 			}
-			*slot = &a
+			*slot, *src = &a, e.source
 			if e.platform != "" && (exact || p.ActualPlatform == "") {
 				p.ActualPlatform = e.platform
 			}

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/carbonarok/trackside/internal/history"
 	"github.com/carbonarok/trackside/internal/timetable"
 	"github.com/carbonarok/trackside/internal/trust"
 	"github.com/carbonarok/trackside/internal/ukrail"
@@ -21,6 +22,9 @@ type Server struct {
 	Store *timetable.Store
 	// Now is the clock used for default time windows; tests override it.
 	Now func() time.Time
+	// History answers Delay Repay and punctuality questions; nil disables
+	// those endpoints.
+	History *history.Querier
 }
 
 // Register adds the native API routes to mux.
@@ -31,6 +35,7 @@ func (s *Server) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v1/locations/{code}/arrivals", s.board(true))
 	mux.HandleFunc("GET /v1/locations/{code}/messages", s.messages)
 	mux.HandleFunc("GET /v1/services/{uid}/{date}", s.service)
+	s.registerHistory(mux)
 }
 
 func (s *Server) now() time.Time {

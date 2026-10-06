@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -25,6 +26,7 @@ import (
 	"github.com/carbonarok/trackside/internal/darwin"
 	"github.com/carbonarok/trackside/internal/db"
 	"github.com/carbonarok/trackside/internal/feeds"
+	"github.com/carbonarok/trackside/internal/history"
 	"github.com/carbonarok/trackside/internal/inbox"
 	"github.com/carbonarok/trackside/internal/ldb"
 	"github.com/carbonarok/trackside/internal/naptan"
@@ -278,6 +280,17 @@ func inboxImporters(pool *pgxpool.Pool) ([]*inbox.Importer, error) {
 	return out, nil
 }
 
+// historyKeep reads HISTORY_DAYS (default 400; 0 keeps history forever).
+func historyKeep() time.Duration {
+	days := 400
+	if v := os.Getenv("HISTORY_DAYS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			days = n
+		}
+	}
+	return time.Duration(days) * 24 * time.Hour
+}
+
 func inboxInterval() time.Duration {
 	if d, err := time.ParseDuration(os.Getenv("INBOX_INTERVAL")); err == nil && d > 0 {
 		return d
@@ -380,7 +393,8 @@ func serve(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config) error {
 		slog.Info("using Darwin Lite for live boards (on demand, cached)")
 	}
 	mux := http.NewServeMux()
-	(&api.Server{Store: store}).Register(mux)
+	hist := &history.Querier{Pool: pool, Store: store}
+	(&api.Server{Store: store, History: hist}).Register(mux)
 	(&compat.Server{Store: store}).Register(mux)
 	api.RegisterDocs(mux)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -394,6 +408,8 @@ func serve(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config) error {
 	go every(ctx, time.Hour, "refresh services", func(ctx context.Context) error {
 		return schedule.RefreshServices(ctx, pool)
 	})
+	archiver := &history.Archiver{Pool: pool, Store: store, Keep: historyKeep()}
+	go every(ctx, time.Hour, "archive history", archiver.Run)
 	if nr.Username != "" {
 		go every(ctx, time.Hour, "daily schedule update", func(ctx context.Context) error {
 			return dailyUpdate(ctx, pool, nr)

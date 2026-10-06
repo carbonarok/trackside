@@ -83,14 +83,14 @@ func (s *Service) applyDarwinActuals() {
 		if d == nil {
 			continue
 		}
-		if p.ActualArr == nil {
-			p.ActualArr = d.ArrAT
+		if p.ActualArr == nil && d.ArrAT != nil {
+			p.ActualArr, p.ActualArrSource = d.ArrAT, "Darwin"
 		}
-		if p.ActualDep == nil {
-			p.ActualDep = d.DepAT
+		if p.ActualDep == nil && d.DepAT != nil {
+			p.ActualDep, p.ActualDepSource = d.DepAT, "Darwin"
 		}
-		if p.ActualPass == nil {
-			p.ActualPass = d.PassAT
+		if p.ActualPass == nil && d.PassAT != nil {
+			p.ActualPass, p.ActualPassSource = d.PassAT, "Darwin"
 		}
 		p.ArrCancelled = p.ArrCancelled || d.ArrCancelled
 		p.DepCancelled = p.DepCancelled || d.DepCancelled

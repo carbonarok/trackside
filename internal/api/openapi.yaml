@@ -153,6 +153,61 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /v1/delay-repay:
+    get:
+      summary: Check a journey for Delay Repay
+      description: |
+        Works out how late a passenger reached their destination, measured
+        against the booked arrival as the national Delay Repay scheme does.
+        If the booked train was cancelled, the next train that ran between
+        the two stations is used. Works for today's trains as well as
+        archived ones.
+      operationId: checkDelayRepay
+      parameters:
+        - { name: from, in: query, required: true, description: Departure station (CRS or TIPLOC)., schema: { type: string } }
+        - { name: to, in: query, required: true, description: Destination station (CRS or TIPLOC)., schema: { type: string } }
+        - { name: date, in: query, required: true, description: Travel date., schema: { type: string, format: date } }
+        - { name: departure, in: query, required: true, description: Booked departure time (HH:MM)., schema: { type: string, example: "08:07" } }
+      responses:
+        "200":
+          description: The claim assessment.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DelayRepay" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/history/services/{uid}:
+    get:
+      summary: A train's recent running
+      operationId: getServiceHistory
+      parameters:
+        - { name: uid, in: path, required: true, schema: { type: string } }
+        - { name: days, in: query, description: How many days back., schema: { type: integer, minimum: 1, maximum: 400, default: 30 } }
+      responses:
+        "200":
+          description: Archived runs, newest first.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ServiceHistory" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /v1/stats/locations/{code}:
+    get:
+      summary: Station punctuality
+      operationId: getStationStats
+      parameters:
+        - $ref: "#/components/parameters/LocationCode"
+        - { name: days, in: query, description: How many days back., schema: { type: integer, minimum: 1, maximum: 400, default: 7 } }
+      responses:
+        "200":
+          description: Punctuality over the period, from archived history.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StationStats" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /healthz:
     get:
       summary: Liveness check
@@ -375,3 +430,112 @@ components:
             stops:
               type: array
               items: { $ref: "#/components/schemas/Stop" }
+
+    TrainRef:
+      type: object
+      required: [uid, runDate]
+      properties:
+        uid: { type: string }
+        runDate: { type: string, format: date }
+        headcode: { type: string }
+        operator: { $ref: "#/components/schemas/Operator" }
+
+    Compensation:
+      type: object
+      description: Standard Delay Repay 15 refund. Operators set their own schemes; check yours.
+      required: [singlePercent, returnPercent]
+      properties:
+        singlePercent: { type: integer }
+        returnPercent: { type: integer }
+
+    DelayRepay:
+      type: object
+      required: [from, to, bookedDeparture, bookedArrival, train, cancelled, eligible, note]
+      properties:
+        from: { $ref: "#/components/schemas/Location" }
+        to: { $ref: "#/components/schemas/Location" }
+        bookedDeparture: { type: string, format: date-time }
+        bookedArrival: { type: string, format: date-time }
+        train: { $ref: "#/components/schemas/TrainRef" }
+        cancelled: { type: boolean }
+        cancelReason: { type: string }
+        lateReason: { type: string }
+        usedTrain:
+          $ref: "#/components/schemas/TrainRef"
+          description: The train that got the passenger there when the booked one was cancelled.
+        actualDeparture: { type: string, format: date-time }
+        arrivedAt: { type: string, format: date-time }
+        arrivalSource: { type: string, enum: [TRUST, TD, Darwin], description: Feed that reported the arrival. }
+        delayMinutes: { type: integer }
+        eligible: { type: boolean }
+        band: { type: string, enum: ["15-29", "30-59", "60-119", "120+"] }
+        compensation: { $ref: "#/components/schemas/Compensation" }
+        note: { type: string }
+
+    HistoricCall:
+      type: object
+      required: [tiploc, cancelled]
+      properties:
+        tiploc: { type: string }
+        crs: { type: string }
+        bookedArrival: { type: string, format: date-time }
+        bookedDeparture: { type: string, format: date-time }
+        actualArrival: { type: string, format: date-time }
+        actualDeparture: { type: string, format: date-time }
+        delayMinutes: { type: integer }
+        cancelled: { type: boolean }
+
+    ServiceRun:
+      type: object
+      required: [train, origin, destination, cancelled]
+      properties:
+        train: { $ref: "#/components/schemas/TrainRef" }
+        origin: { $ref: "#/components/schemas/HistoricCall" }
+        destination: { $ref: "#/components/schemas/HistoricCall" }
+        cancelled: { type: boolean }
+
+    ServiceHistory:
+      type: object
+      required: [uid, days, runs]
+      properties:
+        uid: { type: string }
+        days: { type: integer }
+        runs:
+          type: array
+          items: { $ref: "#/components/schemas/ServiceRun" }
+
+    Punctuality:
+      type: object
+      required: [booked, reported, cancelled, onTime, within5Minutes, within15Minutes, averageDelayMinutes]
+      properties:
+        booked: { type: integer }
+        reported: { type: integer, description: Calls with an actual time. }
+        cancelled: { type: integer }
+        onTime: { type: integer, description: Within 59 seconds of the booked time. }
+        within5Minutes: { type: integer }
+        within15Minutes: { type: integer }
+        averageDelayMinutes: { type: number, description: Early counts as zero. }
+
+    LateTrain:
+      type: object
+      required: [uid, bookedArrival, runs, averageDelayMinutes]
+      properties:
+        uid: { type: string }
+        headcode: { type: string }
+        operator: { $ref: "#/components/schemas/Operator" }
+        bookedArrival: { type: string, description: HH:MM }
+        runs: { type: integer }
+        averageDelayMinutes: { type: number }
+
+    StationStats:
+      type: object
+      required: [location, from, to, arrivals, departures, mostLate]
+      properties:
+        location: { $ref: "#/components/schemas/Location" }
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        arrivals: { $ref: "#/components/schemas/Punctuality" }
+        departures: { $ref: "#/components/schemas/Punctuality" }
+        mostLate:
+          type: array
+          items: { $ref: "#/components/schemas/LateTrain" }
