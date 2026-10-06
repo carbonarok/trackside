@@ -36,6 +36,8 @@ own copy for free, with their own feed credentials.
   (hidden while Darwin suppresses them), cancellations, and readable delay and
   cancellation reasons. Darwin's estimates replace trackside's own wherever it
   has them.
+- **Station messages** from Darwin: the disruption and information notices
+  shown on station screens, attached to every board.
 - **Train Describer positions:** signalling berth steps are mapped to arrivals
   and departures with the SMART data, giving times ahead of TRUST, the train's
   current berth, and "at platform" status.
@@ -252,6 +254,7 @@ TIPLOC (`CLPHMJN`). A CRS code covers every TIPLOC at that station.
 | `GET /v1/locations/{code}` | One location and its TIPLOCs |
 | `GET /v1/locations/{code}/departures` | Departure board |
 | `GET /v1/locations/{code}/arrivals` | Arrivals board |
+| `GET /v1/locations/{code}/messages` | Darwin station messages |
 | `GET /v1/services/{uid}/{YYYY-MM-DD}` | A service's full route with live times and Train Describer position |
 | `GET /healthz` | Liveness |
 
@@ -262,6 +265,10 @@ Board parameters:
 - `to`: departures only. Keep trains that call later at this location.
 - `from`: arrivals only. Keep trains that called earlier at this location.
 - `passes=true`: include trains that pass without stopping.
+
+Boards include the station's `messages` from Darwin, most severe first, as
+plain `text` and simple `html`. Messages Darwin marks as suppressed are left
+out.
 
 Service detail includes `associations`. Each one gives the type from this
 train's point of view (`divides`, `divided_from`, `joined_by`, `joins`,
@@ -368,7 +375,7 @@ VSTP train. It then replays TRUST messages and checks both APIs.
 - [x] Train Describer: TD-derived times, berth position and "at platform"
 - [ ] **Run against the live feeds** and fix whatever real data turns up
 - [x] Associations (joins, divides, next workings) from the timetable and Darwin
-- [ ] Darwin station messages (`OW`)
+- [x] Darwin station messages (`OW`)
 - [ ] "Approaching" states from TD berth offsets
 - [x] Cancellation reason text from the delay attribution codes when there's
   no Darwin

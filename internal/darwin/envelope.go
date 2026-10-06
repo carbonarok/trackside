@@ -72,7 +72,8 @@ type jUpdate struct {
 	Deactivated  many[struct {
 		RID string `json:"rid"`
 	}] `json:"deactivated"`
-	Associations many[jAssociation] `json:"association"`
+	Associations many[jAssociation]    `json:"association"`
+	Messages     many[jStationMessage] `json:"OW"`
 }
 
 type jAssociation struct {
@@ -278,6 +279,9 @@ func (u *jUpdate) convert() *Update {
 		as.Cancelled, as.Deleted = bool(a.Cancelled), bool(a.Deleted)
 		as.Main.RID, as.Assoc.RID = a.Main.RID, a.Assoc.RID
 		out.Associations = append(out.Associations, as)
+	}
+	for _, m := range u.Messages {
+		out.Messages = append(out.Messages, m.convert())
 	}
 	for _, d := range u.Deactivated {
 		out.Deactivated = append(out.Deactivated, struct {

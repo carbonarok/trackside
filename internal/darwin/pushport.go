@@ -25,7 +25,8 @@ type Update struct {
 	Deactivated  []struct {
 		RID string `xml:"rid,attr"`
 	} `xml:"deactivated"`
-	Associations []Association `xml:"association"`
+	Associations []Association    `xml:"association"`
+	Messages     []StationMessage `xml:"OW"`
 }
 
 // Association is Darwin's live view of a join (JJ), divide (VV), next

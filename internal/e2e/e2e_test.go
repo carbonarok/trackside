@@ -437,6 +437,42 @@ func TestPipeline(t *testing.T) {
 		}
 	})
 
+	t.Run("station messages", func(t *testing.T) {
+		applier := &darwin.Applier{Pool: pool}
+		body, err := os.ReadFile("../../testdata/darwin_messages.xml")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := applier.ApplyMessage(ctx, body); err != nil {
+			t.Fatal(err)
+		}
+		var b api.Board
+		get(t, srv, "/v1/locations/CLJ/departures?at=2026-10-06T08:00&window=5", &b)
+		if len(b.Messages) != 2 || b.Messages[0].Severity != 3 || b.Messages[1].Text != "Lifts at platforms 3 & 4 are out of order. More details" {
+			t.Fatalf("CLJ messages (suppressed one must be hidden) = %+v", b.Messages)
+		}
+		var m struct {
+			Messages []api.Message `json:"messages"`
+		}
+		get(t, srv, "/v1/locations/WAT/messages", &m)
+		if len(m.Messages) != 1 || m.Messages[0].ID != 91001 {
+			t.Errorf("WAT messages = %+v", m.Messages)
+		}
+
+		body, err = os.ReadFile("../../testdata/darwin_messages_clear.xml")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := applier.ApplyMessage(ctx, body); err != nil {
+			t.Fatal(err)
+		}
+		var after api.Board
+		get(t, srv, "/v1/locations/CLJ/departures?at=2026-10-06T08:00&window=5", &after)
+		if len(after.Messages) != 1 || after.Messages[0].ID != 91001 {
+			t.Errorf("message with no stations should be removed: %+v", after.Messages)
+		}
+	})
+
 	t.Run("CORPUS reload keeps Darwin names", func(t *testing.T) {
 		f, _ := os.Open("../../testdata/corpus.json")
 		entries, err := corpus.Parse(f)

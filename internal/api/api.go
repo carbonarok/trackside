@@ -29,6 +29,7 @@ func (s *Server) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v1/locations/{code}", s.location)
 	mux.HandleFunc("GET /v1/locations/{code}/departures", s.board(false))
 	mux.HandleFunc("GET /v1/locations/{code}/arrivals", s.board(true))
+	mux.HandleFunc("GET /v1/locations/{code}/messages", s.messages)
 	mux.HandleFunc("GET /v1/services/{uid}/{date}", s.service)
 }
 
@@ -98,7 +99,45 @@ type Board struct {
 	Location Location       `json:"location"`
 	From     time.Time      `json:"from"`
 	To       time.Time      `json:"to"`
+	Messages []Message      `json:"messages"`
 	Services []BoardService `json:"services"`
+}
+
+// Message is a Darwin station message, as shown on station screens.
+type Message struct {
+	ID       int    `json:"id"`
+	Category string `json:"category"`
+	// Severity runs from 0 (information) to 3 (severe).
+	Severity  int       `json:"severity"`
+	Text      string    `json:"text"`
+	HTML      string    `json:"html"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+func (s *Server) stationMessages(ctx context.Context, crs string) ([]Message, error) {
+	msgs, err := s.Store.Messages(ctx, crs)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Message, 0, len(msgs))
+	for _, m := range msgs {
+		out = append(out, Message{ID: m.ID, Category: m.Category, Severity: m.Severity,
+			Text: m.Text, HTML: m.HTML, UpdatedAt: m.UpdatedAt.In(ukrail.London)})
+	}
+	return out, nil
+}
+
+func (s *Server) messages(w http.ResponseWriter, r *http.Request) {
+	locs, ok := s.lookup(w, r.Context(), r.PathValue("code"))
+	if !ok {
+		return
+	}
+	msgs, err := s.stationMessages(r.Context(), locs[0].CRS)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	writeJSON(w, map[string]any{"location": toLocation(locs[0]), "messages": msgs})
 }
 
 // BoardService is one train on a board.
@@ -230,7 +269,13 @@ func (s *Server) board(arrivals bool) http.HandlerFunc {
 			serverError(w, err)
 			return
 		}
+		msgs, err := s.stationMessages(r.Context(), locs[0].CRS)
+		if err != nil {
+			serverError(w, err)
+			return
+		}
 		out := Board{
+			Messages: msgs,
 			Location: toLocation(locs[0]),
 			From:     bq.From.In(ukrail.London),
 			To:       bq.To.In(ukrail.London),

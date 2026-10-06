@@ -41,6 +41,11 @@ func (a *Applier) ApplyMessage(ctx context.Context, body []byte) error {
 				slog.Warn("darwin schedule failed", "rid", u.Schedules[i].RID, "err", err)
 			}
 		}
+		for i := range u.Messages {
+			if err := a.applyMessage(ctx, &u.Messages[i]); err != nil {
+				slog.Warn("darwin station message failed", "id", u.Messages[i].ID, "err", err)
+			}
+		}
 		for i := range u.Associations {
 			if err := a.applyAssociation(ctx, &u.Associations[i]); err != nil {
 				slog.Warn("darwin association failed", "main", u.Associations[i].Main.RID, "err", err)

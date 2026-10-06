@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Pport xmlns="http://www.thalesgroup.com/rtti/PushPort/v18" xmlns:ns7="http://www.thalesgroup.com/rtti/PushPort/StationMessages/v1" ts="2026-10-06T07:00:00.000+01:00" version="18.0">
+  <uR updateOrigin="CIS">
+    <OW id="91001" cat="Station" sev="1">
+      <ns7:Station crs="CLJ" />
+      <ns7:Station crs="WAT" />
+      <ns7:Msg><ns7:p>Lifts at platforms 3 &amp; 4 are out of order. <ns7:a href="https://www.nationalrail.co.uk/">More details</ns7:a></ns7:p></ns7:Msg>
+    </OW>
+    <OW id="91002" cat="Train" sev="3">
+      <ns7:Station crs="CLJ" />
+      <ns7:Msg>Disruption between Clapham Junction and Wimbledon.</ns7:Msg>
+    </OW>
+    <OW id="91003" cat="Misc" sev="0" suppress="true">
+      <ns7:Station crs="CLJ" />
+      <ns7:Msg>Internal note.</ns7:Msg>
+    </OW>
+  </uR>
+</Pport>

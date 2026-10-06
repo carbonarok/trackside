@@ -81,3 +81,36 @@ func TestResolveAcrossMidnight(t *testing.T) {
 		}
 	}
 }
+
+func TestStationMessageXML(t *testing.T) {
+	p := decodeFile(t, "darwin_messages.xml")
+	if len(p.UR.Messages) != 3 {
+		t.Fatalf("messages = %d", len(p.UR.Messages))
+	}
+	m := p.UR.Messages[0]
+	htmlBody, text := messageBody(m.Msg.Inner)
+	if text != "Lifts at platforms 3 & 4 are out of order. More details" {
+		t.Errorf("text = %q", text)
+	}
+	if htmlBody != `<p>Lifts at platforms 3 &amp; 4 are out of order. <a href="https://www.nationalrail.co.uk/">More details</a></p>` {
+		t.Errorf("html = %q", htmlBody)
+	}
+	if len(m.Stations) != 2 || m.Stations[1].CRS != "WAT" || !p.UR.Messages[2].Suppress {
+		t.Errorf("message = %+v", p.UR.Messages)
+	}
+}
+
+func TestStationMessageJSON(t *testing.T) {
+	body := `{"bytes":"{\"ts\":\"2026-10-06T07:00:00+01:00\",\"version\":\"18.0\",\"uR\":{\"OW\":{\"id\":\"91001\",\"cat\":\"Station\",\"sev\":\"1\",\"Station\":[{\"crs\":\"CLJ\"},{\"crs\":\"WAT\"}],\"Msg\":{\"p\":{\"\":\"Lifts out of order.\",\"a\":{\"href\":\"https://example.com\",\"\":\"Details\"}}}}}}"}`
+	p, err := DecodeRecord([]byte(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(p.UR.Messages) != 1 || len(p.UR.Messages[0].Stations) != 2 {
+		t.Fatalf("messages = %+v", p.UR.Messages)
+	}
+	_, text := messageBody(p.UR.Messages[0].Msg.Inner)
+	if text != "Lifts out of order. Details" {
+		t.Errorf("text = %q", text)
+	}
+}
