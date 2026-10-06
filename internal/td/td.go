@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"regexp"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -35,14 +36,39 @@ var headcode = regexp.MustCompile(`^[0-9][A-Z][0-9]{2}$`)
 // Processor applies TD messages.
 type Processor struct {
 	Pool *pgxpool.Pool
-	Map  *Map
+	// Map is the SMART data in use. It can be replaced with SetMap while
+	// messages are being processed; until it is set, berth steps are ignored.
+	Map *Map
+
+	mapMu   sync.RWMutex
+	current *Map
 	// Now bounds which run dates are searched; tests override it.
 	Now func() time.Time
 }
 
 // ApplyFrame decodes a feed body (a STOMP frame holding an array, or a single
 // Kafka record) and applies its berth steps.
+// SetMap replaces the SMART data in use.
+func (p *Processor) SetMap(m *Map) {
+	p.mapMu.Lock()
+	p.current = m
+	p.mapMu.Unlock()
+}
+
+func (p *Processor) smart() *Map {
+	p.mapMu.RLock()
+	defer p.mapMu.RUnlock()
+	if p.current != nil {
+		return p.current
+	}
+	return p.Map
+}
+
 func (p *Processor) ApplyFrame(ctx context.Context, body []byte) error {
+	smart := p.smart()
+	if smart == nil {
+		return nil
+	}
 	var wrapped []map[string]message
 	body = bytes.TrimSpace(body)
 	if len(body) > 0 && body[0] == '{' {
@@ -59,17 +85,17 @@ func (p *Processor) ApplyFrame(ctx context.Context, body []byte) error {
 			var berths []Berth
 			switch kind {
 			case "CA_MSG":
-				berths = p.Map.Step(m.AreaID, m.From, m.To)
+				berths = smart.Step(m.AreaID, m.From, m.To)
 			case "CB_MSG":
-				berths = p.Map.Cancel(m.AreaID, m.From)
+				berths = smart.Cancel(m.AreaID, m.From)
 			case "CC_MSG":
-				berths = p.Map.Interpose(m.AreaID, m.To)
+				berths = smart.Interpose(m.AreaID, m.To)
 			default:
 				continue
 			}
 			var approaching []string
 			if kind == "CA_MSG" || kind == "CC_MSG" {
-				approaching = p.Map.Approaching(m.AreaID, m.To)
+				approaching = smart.Approaching(m.AreaID, m.To)
 			}
 			if (len(berths) == 0 && len(approaching) == 0) || !headcode.MatchString(m.Descr) {
 				continue

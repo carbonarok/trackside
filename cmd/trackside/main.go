@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/carbonarok/trackside/internal/darwin"
 	"github.com/carbonarok/trackside/internal/db"
 	"github.com/carbonarok/trackside/internal/feeds"
+	"github.com/carbonarok/trackside/internal/inbox"
 	"github.com/carbonarok/trackside/internal/ldb"
 	"github.com/carbonarok/trackside/internal/schedule"
 	"github.com/carbonarok/trackside/internal/td"
@@ -41,6 +43,7 @@ Usage:
   trackside import-schedule [FILE]    load a SCHEDULE file (downloads the full extract if no FILE)
   trackside import-smart [FILE]       load SMART TD berth data (downloads if no FILE)
   trackside import-darwin-ref FILE    load a Darwin reference data file (*_ref_v*.xml[.gz])
+  trackside import-inbox              import new files from INBOX_DIR / INBOX_BUCKET once
   trackside refresh-services          re-resolve services for the current window
 
 Configuration is read from the environment; see README.md.
@@ -124,6 +127,20 @@ func run(ctx context.Context, cmd string, args []string) error {
 		return importSchedule(ctx, pool, nr, args)
 	case "import-smart":
 		return importSMART(ctx, pool, nr, args)
+	case "import-inbox":
+		importers, err := inboxImporters(pool)
+		if err != nil {
+			return err
+		}
+		if len(importers) == 0 {
+			return errors.New("set INBOX_DIR or INBOX_BUCKET")
+		}
+		for _, im := range importers {
+			if err := im.Poll(ctx); err != nil {
+				return err
+			}
+		}
+		return nil
 	case "import-darwin-ref":
 		if len(args) == 0 {
 			return errors.New("import-darwin-ref needs a file")
@@ -214,6 +231,29 @@ func importDarwinRef(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config, a
 	slog.Info("loaded Darwin reference data", "locations", len(ref.Locations), "operators", len(ref.TOCs),
 		"late_reasons", len(ref.LateReasons), "cancel_reasons", len(ref.CancelReasons))
 	return nil
+}
+
+// inboxImporters builds importers for INBOX_DIR and INBOX_BUCKET.
+func inboxImporters(pool *pgxpool.Pool) ([]*inbox.Importer, error) {
+	var out []*inbox.Importer
+	if dir := os.Getenv("INBOX_DIR"); dir != "" {
+		out = append(out, &inbox.Importer{Pool: pool, Source: inbox.Dir{Path: dir}})
+	}
+	if u := os.Getenv("INBOX_BUCKET"); u != "" {
+		b, err := inbox.NewBucket(u, os.Getenv("INBOX_ENDPOINT"), os.Getenv("INBOX_ACCESS_KEY"), os.Getenv("INBOX_SECRET_KEY"))
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, &inbox.Importer{Pool: pool, Source: b})
+	}
+	return out, nil
+}
+
+func inboxInterval() time.Duration {
+	if d, err := time.ParseDuration(os.Getenv("INBOX_INTERVAL")); err == nil && d > 0 {
+		return d
+	}
+	return 15 * time.Minute
 }
 
 func feedConfig() feeds.Config {
@@ -345,11 +385,36 @@ func serve(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config) error {
 	if err != nil {
 		return err
 	}
-	if n > 0 {
-		proc := &td.Processor{Pool: pool, Map: smart}
-		startFeed(ctx, stompTopics, "TD", "TD_ALL_SIG_AREA", proc.ApplyFrame)
+	tdProc := &td.Processor{Pool: pool, Map: smart}
+	var tdMu sync.Mutex
+	tdStarted := n > 0
+	if tdStarted {
+		startFeed(ctx, stompTopics, "TD", "TD_ALL_SIG_AREA", tdProc.ApplyFrame)
 	} else {
-		slog.Info("no SMART data loaded; Train Describer disabled (run import-smart)")
+		slog.Info("no SMART data loaded; Train Describer starts once it is (import-smart or the inbox)")
+	}
+
+	importers, err := inboxImporters(pool)
+	if err != nil {
+		return err
+	}
+	for _, im := range importers {
+		im.OnSMART = func(m *td.Map) {
+			tdProc.SetMap(m)
+			tdMu.Lock()
+			defer tdMu.Unlock()
+			if tdStarted {
+				return
+			}
+			if k := kafkaConfig("TD", "TD_ALL_SIG_AREA"); k.Enabled() {
+				tdStarted = true
+				go consumeKafka(ctx, "TD", k, tdProc.ApplyFrame)
+				return
+			}
+			slog.Info("SMART loaded; restart trackside to start Train Describer over STOMP")
+		}
+		slog.Info("watching inbox", "source", im.Source)
+		go every(ctx, inboxInterval(), "inbox "+im.Source.String(), im.Poll)
 	}
 	if len(stompTopics) > 0 {
 		if nr.Username != "" {
