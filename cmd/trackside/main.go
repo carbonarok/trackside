@@ -27,6 +27,7 @@ import (
 	"github.com/carbonarok/trackside/internal/feeds"
 	"github.com/carbonarok/trackside/internal/inbox"
 	"github.com/carbonarok/trackside/internal/ldb"
+	"github.com/carbonarok/trackside/internal/naptan"
 	"github.com/carbonarok/trackside/internal/schedule"
 	"github.com/carbonarok/trackside/internal/td"
 	"github.com/carbonarok/trackside/internal/timetable"
@@ -43,6 +44,7 @@ Usage:
   trackside import-schedule [FILE]    load a SCHEDULE file (downloads the full extract if no FILE)
   trackside import-smart [FILE]       load SMART TD berth data (downloads if no FILE)
   trackside import-darwin-ref FILE    load a Darwin reference data file (*_ref_v*.xml[.gz])
+  trackside import-naptan [FILE]      load station coordinates from NaPTAN (downloads if no FILE)
   trackside import-inbox              import new files from INBOX_DIR / INBOX_BUCKET once
   trackside refresh-services          re-resolve services for the current window
 
@@ -127,6 +129,8 @@ func run(ctx context.Context, cmd string, args []string) error {
 		return importSchedule(ctx, pool, nr, args)
 	case "import-smart":
 		return importSMART(ctx, pool, nr, args)
+	case "import-naptan":
+		return importNaPTAN(ctx, pool, args)
 	case "import-inbox":
 		importers, err := inboxImporters(pool)
 		if err != nil {
@@ -230,6 +234,31 @@ func importDarwinRef(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config, a
 	}
 	slog.Info("loaded Darwin reference data", "locations", len(ref.Locations), "operators", len(ref.TOCs),
 		"late_reasons", len(ref.LateReasons), "cancel_reasons", len(ref.CancelReasons))
+	return nil
+}
+
+func importNaPTAN(ctx context.Context, pool *pgxpool.Pool, args []string) error {
+	var r io.ReadCloser
+	var err error
+	if len(args) > 0 {
+		r, err = os.Open(args[0])
+	} else {
+		slog.Info("downloading", "url", naptan.DownloadURL)
+		r, err = naptan.Download(ctx)
+	}
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	stations, err := naptan.Parse(r)
+	if err != nil {
+		return err
+	}
+	n, err := naptan.Load(ctx, pool, stations)
+	if err != nil {
+		return err
+	}
+	slog.Info("loaded NaPTAN", "stations", len(stations), "locations_with_coordinates", n)
 	return nil
 }
 
@@ -393,6 +422,23 @@ func serve(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config) error {
 	} else {
 		slog.Info("no SMART data loaded; Train Describer starts once it is (import-smart or the inbox)")
 	}
+
+	// Station coordinates are public (NaPTAN), so keep them current without
+	// any configuration: weekly, and straight away if there are none.
+	go func() {
+		var n int
+		pool.QueryRow(ctx, `SELECT count(*) FROM locations WHERE lat IS NOT NULL`).Scan(&n)
+		if n > 0 {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(7 * 24 * time.Hour):
+			}
+		}
+		every(ctx, 7*24*time.Hour, "station coordinates", func(ctx context.Context) error {
+			return importNaPTAN(ctx, pool, nil)
+		})
+	}()
 
 	importers, err := inboxImporters(pool)
 	if err != nil {
