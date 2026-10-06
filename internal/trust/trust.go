@@ -209,6 +209,63 @@ func (a *Applier) exec(ctx context.Context, trainID, sql string, args ...any) er
 	return err
 }
 
+// adopt finds the service for a movement whose train ID we never saw
+// activated. A TRUST train ID embeds the headcode (characters 3-6) and the
+// day of the month the train started (characters 9-10); together with the
+// location and planned time of the movement that identifies the service.
+// The train ID is then recorded so later messages are matched directly.
+func (a *Applier) adopt(ctx context.Context, b movement) (int64, error) {
+	if len(b.TrainID) != 10 {
+		return 0, ErrUnknownTrain
+	}
+	headcode := b.TrainID[2:6]
+	day, err := strconv.Atoi(b.TrainID[8:10])
+	if err != nil {
+		return 0, ErrUnknownTrain
+	}
+	planned, err := Timestamp(b.PlannedTimestamp)
+	if err != nil {
+		return 0, ErrUnknownTrain
+	}
+	today := ukrail.DateOf(a.now())
+	var runDate time.Time
+	for _, d := range []time.Time{today, today.AddDate(0, 0, -1)} {
+		if d.Day() == day {
+			runDate = d
+		}
+	}
+	if runDate.IsZero() {
+		return 0, ErrUnknownTrain
+	}
+	plannedSecs := int(planned.Sub(ukrail.AtRunDate(runDate, 0)).Seconds())
+	rows, err := a.Pool.Query(ctx, `
+		SELECT DISTINCT sv.id
+		FROM services sv
+		JOIN schedules s ON s.id = sv.schedule_id
+		JOIN schedule_locations sl ON sl.schedule_id = sv.schedule_id
+		JOIN locations l ON l.tiploc = sl.tiploc
+		WHERE sv.run_date = $1 AND s.signalling_id = $2 AND l.stanox = $3
+		  AND sv.trust_id IS NULL AND NOT sv.planned_cancel
+		  AND abs(COALESCE(sl.wtt_pass, CASE WHEN $5 THEN sl.wtt_arr ELSE sl.wtt_dep END,
+		                   sl.wtt_arr, sl.wtt_dep) - $4) <= $6`,
+		runDate, headcode, b.LocSTANOX, plannedSecs, b.EventType == "ARRIVAL", matchTolerance)
+	if err != nil {
+		return 0, err
+	}
+	ids, err := pgx.CollectRows(rows, pgx.RowTo[int64])
+	if err != nil {
+		return 0, err
+	}
+	// Ambiguous matches are left alone rather than guessed.
+	if len(ids) != 1 {
+		return 0, ErrUnknownTrain
+	}
+	if _, err := a.Pool.Exec(ctx, `UPDATE services SET trust_id = $2 WHERE id = $1`, ids[0], b.TrainID); err != nil {
+		return 0, err
+	}
+	return ids[0], nil
+}
+
 // matchTolerance is how far a TRUST planned time may be from the timetable
 // before we refuse to attach the event to that location.
 const matchTolerance = 5 * 60
@@ -218,6 +275,11 @@ func (a *Applier) move(ctx context.Context, b movement) error {
 		return nil
 	}
 	id, err := a.serviceID(ctx, b.TrainID)
+	if errors.Is(err, ErrUnknownTrain) {
+		// Trains activated before we started listening are adopted from
+		// their first movement.
+		id, err = a.adopt(ctx, b)
+	}
 	if err != nil {
 		return err
 	}

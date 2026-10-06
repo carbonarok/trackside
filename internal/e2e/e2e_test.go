@@ -238,6 +238,34 @@ func TestPipeline(t *testing.T) {
 		}
 	})
 
+	t.Run("TRUST adopts trains activated before startup", func(t *testing.T) {
+		applier := &trust.Applier{Pool: pool, Now: func() time.Time {
+			return time.Date(2026, 10, 6, 8, 41, 0, 0, ukrail.London)
+		}}
+		// W10005 (1A05) was never activated, so its train ID is unknown.
+		frame := trustFrame(t,
+			map[string]any{"msg_type": "0003", "train_id": "721A05MX06", "event_type": "DEPARTURE",
+				"loc_stanox": "87704", "actual_timestamp": localMillis(8, 15), "planned_timestamp": localMillis(8, 14),
+				"offroute_ind": "false"},
+			// A headcode nothing runs under is ignored.
+			map[string]any{"msg_type": "0003", "train_id": "729Z99MX06", "event_type": "DEPARTURE",
+				"loc_stanox": "87703", "actual_timestamp": localMillis(8, 40), "planned_timestamp": localMillis(8, 37),
+				"offroute_ind": "false"},
+		)
+		if err := applier.ApplyFrame(ctx, frame); err != nil {
+			t.Fatal(err)
+		}
+		var d api.ServiceDetail
+		get(t, srv, "/v1/services/W10005/2026-10-06", &d)
+		if got := d.Stops[0].Departure.Actual; got == nil || got.Format("15:04") != "08:15" {
+			t.Errorf("adopted movement not recorded: %+v", d.Stops[0].Departure)
+		}
+		var trustID string
+		if err := pool.QueryRow(ctx, `SELECT trust_id FROM services WHERE train_uid = 'W10005' AND run_date = '2026-10-06'`).Scan(&trustID); err != nil || trustID != "721A05MX06" {
+			t.Errorf("trust_id = %q, %v", trustID, err)
+		}
+	})
+
 	t.Run("compat search", func(t *testing.T) {
 		var res struct {
 			Location map[string]any `json:"location"`
