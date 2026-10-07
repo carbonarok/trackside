@@ -176,6 +176,10 @@ async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
     }
     throw new ApiError(res.status, message)
   }
+  // Something other than trackside answered (a proxy, another app on the port).
+  if (!res.headers.get('Content-Type')?.includes('json')) {
+    throw new ApiError(res.status, 'The trackside server didn’t answer. Check that it’s running.')
+  }
   return res.json() as Promise<T>
 }
 

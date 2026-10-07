@@ -52,7 +52,7 @@ export function DelayRepayPage() {
 
   return (
     <div className="page repay-page">
-      <header className="page-head">
+      <header className="table-head">
         <h1>Delay Repay checker</h1>
         <p className="lede">
           Find out how late your train got you there, measured the way Delay Repay is: arrival at your destination against

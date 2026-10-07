@@ -1,0 +1,622 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-06T00:00:00+00:00",
+  "title": "Design System: trackside",
+  "extensions": {
+    "colorMeta": {
+      "timetable-blue": {
+        "role": "primary",
+        "displayName": "Timetable Blue",
+        "cssVar": "--blue",
+        "canonical": "#1f4fb8",
+        "tonalRamp": [
+          "#00052c",
+          "#011b62",
+          "#07359c",
+          "#2858c2",
+          "#487ce9",
+          "#75a3fe",
+          "#aecaff",
+          "#e6efff"
+        ],
+        "darkValue": "#2f5fcf"
+      },
+      "timetable-blue-deep": {
+        "role": "primary",
+        "displayName": "Timetable Blue Deep",
+        "cssVar": "--blue-deep",
+        "canonical": "#193f94",
+        "tonalRamp": [
+          "#00052d",
+          "#011a64",
+          "#143a8e",
+          "#335cb3",
+          "#527fd9",
+          "#76a3fc",
+          "#aecafe",
+          "#e6efff"
+        ],
+        "darkValue": "#2851b3"
+      },
+      "timetable-blue-text": {
+        "role": "primary",
+        "displayName": "Timetable Blue Text",
+        "cssVar": "--blue-text",
+        "canonical": "#1f4fb8",
+        "tonalRamp": [
+          "#00052c",
+          "#011b62",
+          "#07359c",
+          "#2858c2",
+          "#487ce9",
+          "#75a3fe",
+          "#aecaff",
+          "#e6efff"
+        ],
+        "darkValue": "#8eb0ff"
+      },
+      "timetable-blue-wash": {
+        "role": "primary",
+        "displayName": "Timetable Wash",
+        "cssVar": "--blue-wash",
+        "canonical": "#eef2fa",
+        "tonalRamp": [
+          "#090b10",
+          "#22252b",
+          "#3f4248",
+          "#5e6168",
+          "#7f8289",
+          "#a1a5ad",
+          "#c5c9d1",
+          "#ebeff7"
+        ],
+        "darkValue": "#161e2e"
+      },
+      "on-blue": {
+        "role": "primary",
+        "displayName": "On Blue",
+        "cssVar": "--blue-ink",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "signal-green": {
+        "role": "secondary",
+        "displayName": "Signal Green",
+        "cssVar": "--green",
+        "canonical": "#1a8a4f",
+        "tonalRamp": [
+          "#001004",
+          "#022e16",
+          "#05502a",
+          "#0e7440",
+          "#2f995d",
+          "#58bd7e",
+          "#7ee2a2",
+          "#c6ffd7"
+        ]
+      },
+      "signal-amber": {
+        "role": "secondary",
+        "displayName": "Signal Amber",
+        "cssVar": "--amber",
+        "canonical": "#e2a01c",
+        "tonalRamp": [
+          "#130900",
+          "#332101",
+          "#583c03",
+          "#805908",
+          "#aa7710",
+          "#d89700",
+          "#ffbb45",
+          "#feecd0"
+        ]
+      },
+      "signal-red": {
+        "role": "secondary",
+        "displayName": "Signal Red",
+        "cssVar": "--red",
+        "canonical": "#cc3b24",
+        "tonalRamp": [
+          "#1e0100",
+          "#4b0600",
+          "#7d1101",
+          "#b21e03",
+          "#db4a32",
+          "#fc775f",
+          "#feb4a5",
+          "#ffe9e4"
+        ]
+      },
+      "signal-red-ink": {
+        "role": "secondary",
+        "displayName": "Signal Red Ink",
+        "cssVar": "--red-ink",
+        "canonical": "#b2321d",
+        "tonalRamp": [
+          "#1e0100",
+          "#4b0600",
+          "#7a1606",
+          "#ac2c17",
+          "#d4523c",
+          "#fc775f",
+          "#ffb4a4",
+          "#fee9e5"
+        ],
+        "darkValue": "#f1785f"
+      },
+      "lamp-off": {
+        "role": "secondary",
+        "displayName": "Lamp Off",
+        "cssVar": "--lamp-off",
+        "canonical": "#c2c8d0",
+        "tonalRamp": [
+          "#080b11",
+          "#21252b",
+          "#3d4249",
+          "#5c6269",
+          "#7d838a",
+          "#a0a6ad",
+          "#c4cad2",
+          "#e9eff7"
+        ],
+        "darkValue": "#3a414b"
+      },
+      "unlit-mark": {
+        "role": "secondary",
+        "displayName": "Unlit Mark",
+        "cssVar": "--unlit",
+        "canonical": "#9aa3ae",
+        "tonalRamp": [
+          "#060c13",
+          "#1f262e",
+          "#3b434c",
+          "#5a626c",
+          "#7b838e",
+          "#9da6b1",
+          "#c1cad6",
+          "#e6f0fb"
+        ],
+        "darkValue": "#6b7480"
+      },
+      "flap-leaf": {
+        "role": "tertiary",
+        "displayName": "Flap Leaf",
+        "cssVar": "--flap",
+        "canonical": "#1b1f25",
+        "tonalRamp": [
+          "#080b11",
+          "#21252b",
+          "#3e4249",
+          "#5d6269",
+          "#7e838a",
+          "#a0a5ad",
+          "#c4cad2",
+          "#e9eff7"
+        ],
+        "darkValue": "#22272e"
+      },
+      "flap-ink": {
+        "role": "tertiary",
+        "displayName": "Flap Ink",
+        "cssVar": "--flap-ink",
+        "canonical": "#f3f4f6",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242526",
+          "#414243",
+          "#606163",
+          "#818284",
+          "#a4a5a7",
+          "#c8c9cb",
+          "#edeef0"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "cssVar": "--paper",
+        "canonical": "#f6f7f9",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242526",
+          "#414243",
+          "#606163",
+          "#818284",
+          "#a4a5a7",
+          "#c8c9cb",
+          "#edeef0"
+        ],
+        "darkValue": "#0c0e11"
+      },
+      "sheet": {
+        "role": "neutral",
+        "displayName": "Sheet",
+        "cssVar": "--sheet",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ],
+        "darkValue": "#15181c"
+      },
+      "well": {
+        "role": "neutral",
+        "displayName": "Well",
+        "cssVar": "--well",
+        "canonical": "#eceff3",
+        "tonalRamp": [
+          "#090b0e",
+          "#232528",
+          "#404245",
+          "#5f6165",
+          "#808286",
+          "#a2a5a9",
+          "#c6c9cd",
+          "#eceff3"
+        ],
+        "darkValue": "#1b1f24"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "cssVar": "--ink",
+        "canonical": "#0f1419",
+        "tonalRamp": [
+          "#070c10",
+          "#20262b",
+          "#3d4349",
+          "#5c6268",
+          "#7d838a",
+          "#9fa6ad",
+          "#c3cad1",
+          "#e8eff7"
+        ],
+        "darkValue": "#e8eaed"
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Ink 2",
+        "cssVar": "--ink-2",
+        "canonical": "#3a434e",
+        "tonalRamp": [
+          "#050c14",
+          "#1e2630",
+          "#3a434e",
+          "#59626e",
+          "#798390",
+          "#9ca6b3",
+          "#bfcad8",
+          "#e4f0fe"
+        ],
+        "darkValue": "#c2c8d0"
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "cssVar": "--muted",
+        "canonical": "#5d6876",
+        "tonalRamp": [
+          "#040c16",
+          "#1c2632",
+          "#394350",
+          "#576270",
+          "#788392",
+          "#9aa6b6",
+          "#becada",
+          "#e4f0fe"
+        ],
+        "darkValue": "#8d97a4"
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "cssVar": "--rule",
+        "canonical": "#e0e4ea",
+        "tonalRamp": [
+          "#090b0f",
+          "#22252a",
+          "#3f4247",
+          "#5e6167",
+          "#7f8388",
+          "#a1a5ab",
+          "#c5c9cf",
+          "#ebeff5"
+        ],
+        "darkValue": "#23282e"
+      },
+      "rule-strong": {
+        "role": "neutral",
+        "displayName": "Rule Strong",
+        "cssVar": "--rule-strong",
+        "canonical": "#c3cad4",
+        "tonalRamp": [
+          "#070b12",
+          "#20252d",
+          "#3d424b",
+          "#5c626a",
+          "#7c838c",
+          "#9fa6af",
+          "#c3cad4",
+          "#e8eff9"
+        ],
+        "darkValue": "#3a414b"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Home heading only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Station name on a board; train on its page."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Destinations on board rows, stop names on the route."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Times, platforms and journey ends: narrowed, tabular."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Prose, run status, notices. 16px under 640px."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Column heads stated once; field labels at 0.8rem."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "CRS codes and headcodes."
+      }
+    },
+    "shadows": [
+      {
+        "name": "raise",
+        "value": "0 1px 2px rgb(15 20 25 / 0.08), 0 1px 1px rgb(15 20 25 / 0.04)",
+        "darkValue": "0 1px 2px rgb(0 0 0 / 0.5)",
+        "cssVar": "--raise",
+        "purpose": "Selected segment and the Home search field."
+      },
+      {
+        "name": "float",
+        "value": "0 12px 32px rgb(15 20 25 / 0.14), 0 2px 6px rgb(15 20 25 / 0.06)",
+        "darkValue": "0 12px 32px rgb(0 0 0 / 0.55), 0 2px 6px rgb(0 0 0 / 0.4)",
+        "cssVar": "--float",
+        "purpose": "Search menus, the map panel, the skip link on focus."
+      },
+      {
+        "name": "focus-ring",
+        "value": "outline: 2px solid var(--focus); outline-offset: 2px",
+        "purpose": "Default keyboard focus; --focus is #1f4fb8 light, #8eb0ff dark."
+      },
+      {
+        "name": "field-focus",
+        "value": "outline: 3px solid color-mix(in srgb, var(--focus) 28%, transparent); outline-offset: 0; border-color: var(--focus)",
+        "purpose": "Focus on inputs and selects."
+      },
+      {
+        "name": "flap-seam",
+        "value": "1px rgb(0 0 0 / 0.55) line across the tile middle (0.7 in dark)",
+        "cssVar": "--flap-seam",
+        "purpose": "The split across a flap tile."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state",
+        "value": "120ms ease-out",
+        "purpose": "Colour, background and border-colour transitions on hover."
+      },
+      {
+        "name": "flap-turn",
+        "value": "150ms cubic-bezier(0.4, 0, 0.6, 1)",
+        "purpose": "Inline changed character turns about its middle (rotateX 90deg to 0)."
+      },
+      {
+        "name": "flap-step",
+        "value": "150ms per step, 2-3 stand-in characters, 50ms stagger per character",
+        "purpose": "Sequencing of a split-flap change, left to right."
+      },
+      {
+        "name": "leaf-fall",
+        "value": "75ms ease-in",
+        "purpose": "Old top leaf falls over the hinge to -90deg, brightening to 1.5."
+      },
+      {
+        "name": "leaf-drop",
+        "value": "75ms ease-out, 75ms delay",
+        "purpose": "New bottom leaf drops from 90deg, brightness 0.5 to 1."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: reduce",
+        "purpose": "All flap animation off; the final value shows at once."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact",
+        "value": "640px",
+        "purpose": "Body to 16px; route grid narrows; map panel full width."
+      },
+      {
+        "name": "board-fold",
+        "value": "760px",
+        "purpose": "Board rows fold to two lines; shell wraps; controls become a two-column grid."
+      }
+    ],
+    "themes": {
+      "dark": "Every colour token with a darkValue is reassigned under prefers-color-scheme: dark."
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one solid-blue action per view: Check, Show all platforms.",
+      "html": "<button class=\"ds-btn\">Check</button>",
+      "css": ".ds-btn { font-family: var(--sans); display: inline-flex; align-items: center; height: 2.5rem; padding: 0 1rem; border: 0; border-radius: 6px; background: var(--blue); color: var(--blue-ink); font-weight: 600; cursor: pointer; transition: background-color 120ms ease-out; } .ds-btn:hover { background: var(--blue-deep); } .ds-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; } .ds-btn[disabled] { opacity: 0.6; cursor: progress; }"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Secondary action: sheet ground with a hairline inset stroke.",
+      "html": "<button class=\"ds-btn-quiet\">Show all platforms</button>",
+      "css": ".ds-btn-quiet { font-family: var(--sans); display: inline-flex; align-items: center; height: 2.5rem; padding: 0 1rem; border: 0; border-radius: 6px; background: var(--sheet); color: var(--ink); box-shadow: inset 0 0 0 1px var(--rule-strong); font-weight: 600; cursor: pointer; transition: background-color 120ms ease-out; } .ds-btn-quiet:hover { background: var(--well); } .ds-btn-quiet:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Search, date and time fields with a muted label above.",
+      "html": "<label class=\"ds-field\"><span>Station</span><input class=\"ds-input\" type=\"search\" placeholder=\"Station name or code\"></label>",
+      "css": ".ds-field { font-family: var(--sans); display: flex; flex-direction: column; gap: 0.35rem; } .ds-field span { font-size: 0.8rem; font-weight: 500; color: var(--muted); } .ds-input { font: inherit; color: var(--ink); width: 100%; height: 2.5rem; padding: 0 0.75rem; border: 1px solid var(--rule-strong); border-radius: 6px; background: var(--sheet); transition: border-color 120ms ease-out; } .ds-input::placeholder { color: var(--muted); } .ds-input:hover { border-color: color-mix(in srgb, var(--ink) 35%, var(--rule-strong)); } .ds-input:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 28%, transparent); outline-offset: 0; border-color: var(--focus); }"
+    },
+    {
+      "name": "Platform Multi-select",
+      "kind": "input",
+      "refersTo": "platform-filter",
+      "description": "Pick any number of platforms; selected tiles fill timetable blue.",
+      "html": "<div class=\"ds-multi\"><button class=\"ds-multi-button\" aria-expanded=\"true\">Platforms 4, 6</button><div class=\"ds-multi-panel\"><div class=\"ds-multi-head\"><span>2 selected</span><a href=\"#\">Show all</a></div><div class=\"ds-multi-grid\"><label class=\"ds-opt\"><input type=\"checkbox\">1</label><label class=\"ds-opt\"><input type=\"checkbox\">2</label><label class=\"ds-opt\"><input type=\"checkbox\">3</label><label class=\"ds-opt is-on\"><input type=\"checkbox\" checked>4</label><label class=\"ds-opt\"><input type=\"checkbox\">5</label><label class=\"ds-opt is-on\"><input type=\"checkbox\" checked>6</label></div></div></div>",
+      "css": ".ds-multi { position: relative; width: 19rem; font-family: 'Archivo Variable', system-ui, sans-serif; } .ds-multi-button { height: 2.5rem; min-width: 10rem; padding: 0 2rem 0 0.75rem; border: 1px solid var(--rule-strong, #c3cad4); border-radius: 6px; background: var(--sheet, #fff); box-shadow: inset 0 0 0 1px var(--blue, #1f4fb8); border-color: var(--blue, #1f4fb8); font-weight: 500; text-align: left; cursor: pointer; } .ds-multi-panel { margin-top: 4px; padding: 0.75rem; border: 1px solid var(--rule, #e0e4ea); border-radius: 8px; background: var(--sheet, #fff); box-shadow: 0 12px 32px rgb(15 20 25 / 0.14), 0 2px 6px rgb(15 20 25 / 0.06); } .ds-multi-head { display: flex; justify-content: space-between; margin-bottom: 0.6rem; color: var(--muted, #5d6876); font-size: 0.82rem; } .ds-multi-head a { color: var(--blue-text, #1f4fb8); } .ds-multi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.6rem, 1fr)); gap: 6px; } .ds-opt { position: relative; display: grid; place-items: center; height: 2.4rem; border: 1px solid var(--rule-strong, #c3cad4); border-radius: 6px; font-weight: 600; font-stretch: 84%; cursor: pointer; } .ds-opt:hover { border-color: var(--ink-2, #3a434e); } .ds-opt input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; } .ds-opt.is-on { background: var(--blue, #1f4fb8); border-color: var(--blue, #1f4fb8); color: #fff; } .ds-opt:has(input:focus-visible) { outline: 2px solid var(--focus, #1f4fb8); outline-offset: 2px; }"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "chip",
+      "refersTo": "segmented",
+      "description": "Departures / Arrivals: a well track with a raised selected segment.",
+      "html": "<div class=\"ds-tabs\" role=\"tablist\"><button role=\"tab\" aria-selected=\"true\">Departures</button><button role=\"tab\" aria-selected=\"false\">Arrivals</button></div>",
+      "css": ".ds-tabs { font-family: var(--sans); display: inline-flex; gap: 2px; height: 2.5rem; padding: 3px; border-radius: 8px; background: var(--well); } .ds-tabs button { font: inherit; border: 0; border-radius: 6px; padding: 0 0.95rem; background: transparent; color: var(--muted); font-weight: 500; cursor: pointer; transition: color 120ms ease-out, background-color 120ms ease-out; } .ds-tabs button:hover { color: var(--ink); } .ds-tabs button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; } .ds-tabs button[aria-selected='true'] { background: var(--sheet); color: var(--ink); font-weight: 600; box-shadow: var(--raise); }"
+    },
+    {
+      "name": "Shell Navigation",
+      "kind": "nav",
+      "refersTo": "",
+      "description": "White shell bar with a hairline; the active link is underlined in blue at the bar edge.",
+      "html": "<header class=\"ds-shell\"><a class=\"ds-brand\" href=\"#\"><svg viewBox=\"0 0 14 24\" width=\"11\" height=\"19\" aria-hidden=\"true\"><rect x=\"0.5\" y=\"0.5\" width=\"13\" height=\"23\" rx=\"6.5\" fill=\"#1b1f25\"/><circle cx=\"7\" cy=\"7\" r=\"3.6\" fill=\"#31c06f\"/><circle cx=\"7\" cy=\"17\" r=\"3.6\" fill=\"#4a525d\"/></svg>trackside</a><nav><a class=\"active\" href=\"#\">Live map</a><a href=\"#\">Delay Repay</a></nav></header>",
+      "css": ".ds-shell { font-family: var(--sans); display: flex; align-items: center; gap: 2rem; min-height: 3.5rem; padding: 0 2rem; background: var(--sheet); border-bottom: 1px solid var(--rule); color: var(--ink); } .ds-brand { display: flex; align-items: center; gap: 0.5rem; font-size: 1.15rem; font-weight: 700; font-stretch: 94%; letter-spacing: -0.02em; text-decoration: none; color: inherit; } .ds-shell nav { display: flex; align-self: stretch; gap: 1.5rem; } .ds-shell nav a { display: flex; align-items: center; font-size: 0.93rem; font-weight: 500; text-decoration: none; color: var(--muted); box-shadow: inset 0 -2px 0 transparent; transition: color 120ms ease-out; } .ds-shell nav a:hover { color: var(--ink); } .ds-shell nav a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; } .ds-shell nav a.active { color: var(--ink); box-shadow: inset 0 -2px 0 var(--blue); }"
+    },
+    {
+      "name": "Signal Lamp",
+      "kind": "custom",
+      "refersTo": "signal-lamp",
+      "description": "Running status as a plain dot; two stacked amber lamps for double yellow. Always beside words.",
+      "html": "<span class=\"ds-run\"><span class=\"ds-signal ds-green\"><span class=\"ds-lamp\"></span></span>On time</span> <span class=\"ds-run\"><span class=\"ds-signal ds-double\"><span class=\"ds-lamp\"></span><span class=\"ds-lamp\"></span></span>Exp 14:32</span> <span class=\"ds-run\"><span class=\"ds-signal ds-red\"><span class=\"ds-lamp\"></span></span>Cancelled</span>",
+      "css": ".ds-run { font-family: var(--sans); display: inline-flex; align-items: center; gap: 0.6rem; margin-right: 1.5rem; font-weight: 500; color: var(--ink); } .ds-signal { display: inline-flex; flex-direction: column; justify-content: center; gap: 2px; } .ds-lamp { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--lamp-off); } .ds-double .ds-lamp { width: 0.4rem; height: 0.4rem; background: var(--amber); } .ds-green .ds-lamp { background: var(--green); } .ds-red .ds-lamp { background: var(--red); }"
+    },
+    {
+      "name": "Platform Plate",
+      "kind": "custom",
+      "refersTo": "platform-plate",
+      "description": "Confirmed (solid blue), booked (outline), changed (amber with \"was N\" beneath).",
+      "html": "<span class=\"ds-plate\">4</span> <span class=\"ds-plate ds-unconfirmed\">2</span> <span class=\"ds-changed\"><span class=\"ds-plate ds-amber\">7</span><span class=\"ds-was\">was 5</span></span>",
+      "css": ".ds-plate { font-family: var(--sans); display: inline-grid; place-items: center; vertical-align: top; min-width: 1.9rem; height: 1.9rem; padding: 0 0.3rem; margin-right: 0.75rem; border-radius: 5px; background: var(--blue); color: var(--blue-ink); font-size: 0.98rem; font-weight: 600; font-stretch: 84%; line-height: 1; font-variant-numeric: tabular-nums; } .ds-unconfirmed { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--rule-strong); } .ds-amber { background: var(--amber); color: #1a1200; margin-right: 0; } .ds-changed { font-family: var(--sans); display: inline-flex; flex-direction: column; align-items: center; gap: 0.2rem; } .ds-was { font-size: 0.72rem; font-weight: 500; line-height: 1; color: var(--ink-2); white-space: nowrap; }"
+    },
+    {
+      "name": "Split-flap Tiles",
+      "kind": "custom",
+      "refersTo": "flap-tile",
+      "description": "The lead train's time on dark split leaves; changed characters flip over the hinge.",
+      "html": "<span class=\"ds-flap\" aria-label=\"14:07\"><span>1</span><span>4</span><span class=\"ds-sep\">:</span><span>0</span><span>7</span></span>",
+      "css": ".ds-flap { font-family: var(--sans); display: inline-flex; gap: 2px; font-size: 1.8rem; font-weight: 600; font-stretch: 84%; font-variant-numeric: tabular-nums; } .ds-flap span { position: relative; display: inline-block; min-width: 0.72em; padding: 0.1em 0.04em 0.07em; text-align: center; border-radius: 3px; background: var(--flap); color: var(--flap-ink); line-height: 1; overflow: hidden; } .ds-flap span::after { content: ''; position: absolute; left: 0; right: 0; top: calc(50% - 0.5px); height: 1px; background: var(--flap-seam); } .ds-flap span:hover { animation: ds-turn 150ms cubic-bezier(0.4, 0, 0.6, 1); } .ds-flap .ds-sep { min-width: 0.3em; padding: 0; background: none; color: var(--muted); } .ds-flap .ds-sep::after { display: none; } @keyframes ds-turn { from { transform: rotateX(90deg); } } @media (prefers-reduced-motion: reduce) { .ds-flap span:hover { animation: none; } }"
+    },
+    {
+      "name": "Route Stop",
+      "kind": "custom",
+      "refersTo": "",
+      "description": "One calling point on the route line diagram: right-aligned times, blue line and node, stop name.",
+      "html": "<ol class=\"ds-route\"><li class=\"ds-stop ds-passed\"><span class=\"ds-times\">14:07</span><span class=\"ds-line\"><span class=\"ds-node\"></span></span><span class=\"ds-name\">Reading</span></li><li class=\"ds-stop ds-here\"><span class=\"ds-times\">14:32</span><span class=\"ds-line\"><span class=\"ds-node\"></span></span><span class=\"ds-name\">Didcot Parkway</span></li><li class=\"ds-stop\"><span class=\"ds-times\">14:51</span><span class=\"ds-line\"><span class=\"ds-node\"></span></span><span class=\"ds-name\">Swindon</span></li></ol>",
+      "css": ".ds-route { font-family: var(--sans); list-style: none; margin: 0; padding: 0; color: var(--ink); } .ds-stop { display: grid; grid-template-columns: 5rem 2rem 1fr; gap: 0 0.9rem; min-height: 3.5rem; border-bottom: 1px solid var(--rule); } .ds-times { padding-top: 0.65rem; text-align: right; font-size: 1.02rem; font-weight: 600; font-stretch: 84%; font-variant-numeric: tabular-nums; } .ds-line { position: relative; display: flex; justify-content: center; } .ds-line::before { content: ''; position: absolute; top: -1px; bottom: -1px; width: 3px; border-radius: 2px; background: var(--blue); opacity: 0.2; } .ds-passed .ds-line::before { opacity: 1; } .ds-node { position: relative; margin-top: 0.8rem; width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--paper); border: 2px solid var(--blue); box-sizing: border-box; } .ds-passed .ds-node { background: var(--blue); } .ds-here .ds-node { width: 1.1rem; height: 1.1rem; margin-top: 0.6rem; background: var(--ink); border: 3px solid var(--paper); outline: 2px solid var(--blue); } .ds-name { padding: 0.6rem 0 0.8rem; font-size: 1.05rem; font-weight: 600; font-stretch: 94%; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Public Timetable",
+    "overview": "trackside reads like a page of the national public timetable, made live. A cool neutral ground, a white shell bar and near-black ink carry everything; hairline rules divide rows instead of boxes; one family, Archivo, does all the talking, narrowed for figures and names. Timetable blue is held back as an accent for the things a rider acts on: a confirmed platform, the route line, the current selection, focus, and the primary button.\n\nThe mood is restrained, precise and calm. The first, louder rendition of this world used full-strength colour fields and read as tacky to the user; this one withdraws them. What remains is the railway's own furniture at small scale: a signal lamp for status, a plate for the platform, a line diagram for the route, and split-flap leaves that flip when a figure changes. The motion is the user's own request and is pinned; it is the one animated idea, and it fires only on change.\n\nDensity is board density. A rider should find their train, platform and lateness in one glance down the time column, while an enthusiast reads headcode and operator on the same row. The rejected reference is the dark dashboard of identical list rows. Light and dark themes are both first-class, switched by `prefers-color-scheme`.",
+    "keyCharacteristics": [
+      "Cool neutral paper, white sheet, near-black ink; hairlines, not boxes.",
+      "Timetable blue as a rationed accent: plates, route line, selection, focus, primary action.",
+      "Archivo variable throughout: 84% width for figures, 94% for names, normal width for prose; tabular figures everywhere.",
+      "Status said by small marks (signal lamps, a changed plate, a notice dot), always alongside words.",
+      "Split-flap motion on changed figures; the next train's time sits on dark split leaves.",
+      "The next train leads: a larger row at the top of the board."
+    ],
+    "rules": [
+      {
+        "name": "The Rationed Blue Rule",
+        "body": "Blue goes only where a rider acts or must trust a fact: confirmed plates, the route line, the active state, focus and the primary button. No surface larger than a plate or a button is ever filled with it.",
+        "section": "colors"
+      },
+      {
+        "name": "The Small Marks Rule",
+        "body": "Status colour lives in marks a few pixels across: a lamp, a notice dot, a changed plate. It never fills a row, a band or a block of text background, and every colour mark has words beside it (the aspect label, \"was 4\", the notice label).",
+        "section": "colors"
+      },
+      {
+        "name": "The Three Widths Rule",
+        "body": "Figures at 84% width, names at 94%, prose at 100%. A new number or proper name picks its width by what it is, not by where it sits.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "`font-variant-numeric: tabular-nums` is set on the body, so every column of times aligns digit for digit. Never switch it off.",
+        "section": "typography"
+      },
+      {
+        "name": "The Journey Length Rule",
+        "body": "On a board, each row's journey rule is as long as its journey: its length is the journey time over the longest journey on the board (never less than an hour, never shorter than 8% of the track). Length means duration and nothing else.",
+        "section": "layout"
+      },
+      {
+        "name": "The Said Once Rule",
+        "body": "Column heads and the platform key (solid plate is confirmed, outline is booked) are stated once per board, never repeated per row.",
+        "section": "layout"
+      },
+      {
+        "name": "The Hairline Rule",
+        "body": "Rows, notices, route stops and definition lists are divided by 1px rules, never wrapped in cards. Boxes are reserved for a form (Delay Repay) and things that float (menus, the map panel).",
+        "section": "elevation"
+      },
+      {
+        "name": "The Pinned Flap Rule",
+        "body": "Only a figure whose value has changed flips, plus the lead row's introduction. Nothing else in the interface animates beyond 120ms colour transitions.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "**Do** keep blue to confirmed plates, the route line, active and selected states, focus and the primary button.",
+      "**Do** say every status in words beside its lamp, dot or plate; write \"was N\" under a changed plate.",
+      "**Do** set times and platforms in the figure style (600, 84% width, tabular) and names at 94% width.",
+      "**Do** divide rows with 1px hairlines (rule, or rule-strong under heads) and state column heads once.",
+      "**Do** make a new live figure a `Flap` so a change announces itself, and honour reduced motion.",
+      "**Do** give every new colour a dark-mode value alongside the light one under `prefers-color-scheme`."
+    ],
+    "donts": [
+      "**Don't** fill bands, rows, headers or panels with full-strength colour; the user withdrew colour fields as tacky. Solid colour stops at the size of a plate or a button.",
+      "**Don't** wrap board rows, route stops or notices in cards.",
+      "**Don't** animate anything except changed figures; no entrance choreography, no hover lifts.",
+      "**Don't** add halos or glows to signal lamps; they are plain dots.",
+      "**Don't** use any second typeface; Archivo carries display, figures and prose.",
+      "**Don't** reintroduce the replaced navy-and-Barlow Platform Sign world."
+    ]
+  }
+}

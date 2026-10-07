@@ -146,10 +146,12 @@ export function StationPicker({
   label,
   value,
   onChange,
+  placeholder = 'Station name or code',
 }: {
   label: string
   value?: Location
   onChange: (l: Location | undefined) => void
+  placeholder?: string
 }) {
   const [q, setQ] = useState(value?.name ?? '')
   const [options, setOptions] = useState<Location[]>([])
@@ -181,7 +183,7 @@ export function StationPicker({
         type="search"
         autoComplete="off"
         value={q}
-        placeholder="Station name or code"
+        placeholder={placeholder}
         onChange={e => {
           setQ(e.target.value)
           setOpen(true)

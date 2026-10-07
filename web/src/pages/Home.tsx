@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { api } from '../api'
+import { Flap } from '../components/Flap'
 import { Search } from '../components/Search'
 import { usePolling } from '../components/ui'
 
@@ -27,7 +28,9 @@ export function Home() {
         <Search autoFocus />
         {running !== undefined && running > 0 && (
           <p className="running">
-            {running.toLocaleString('en-GB')} passenger trains are running right now. <Link to="/map">See them on the map</Link>
+            <Flap className="running-count" value={running.toLocaleString('en-GB')} introduce />
+            <span>passenger trains are running right now.</span>
+            <Link to="/map">See them on the map</Link>
           </p>
         )}
       </section>

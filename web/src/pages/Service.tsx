@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api, type Association, type ServiceDetail, type Stop, type Times } from '../api'
+import { Flap } from '../components/Flap'
 import { ErrorNote, PlatformSign, Signal, usePolling } from '../components/ui'
 import { aspectFor, bookedTime, hhmm, lateness, longDate } from '../format'
 
@@ -27,7 +28,9 @@ const associationText: Record<Association['type'], string> = {
 export function Service() {
   const { uid = '', date = '' } = useParams()
   const [showPasses, setShowPasses] = useState(false)
-  const { data: svc, error } = usePolling(signal => api.service(uid, date, signal), [uid, date], 30_000)
+  const { data: svc, error, live } = usePolling(signal => api.service(uid, date, signal), [uid, date], 30_000, {
+    topic: `train:${uid}|${date}`,
+  })
 
   useEffect(() => {
     if (svc) document.title = `${svc.headcode ?? svc.uid} ${svc.origin[0]?.name} to ${svc.destination[0]?.name} · trackside`
@@ -43,8 +46,28 @@ export function Service() {
     return last
   }, [svc])
 
-  if (error && !svc) return <div className="page"><ErrorNote error={error} /></div>
-  if (!svc) return <div className="page"><p className="note">Loading train…</p></div>
+  // How the train is running, from the last place it reported.
+  const running = (() => {
+    if (!svc) return { aspect: 'unlit' as const, late: undefined }
+    if (svc.status === 'cancelled') return { aspect: 'red' as const, late: undefined }
+    const s = svc.stops[progress]
+    const t = s && (s.departure?.actual ? s.departure : s.arrival?.actual ? s.arrival : s.pass)
+    if (!t?.actual) return { aspect: 'unlit' as const, late: undefined }
+    return { aspect: aspectFor(t.delayMinutes, { live: true }), late: lateness(t.delayMinutes) }
+  })()
+
+  if (error && !svc)
+    return (
+      <div className="page">
+        <ErrorNote error={error} />
+      </div>
+    )
+  if (!svc)
+    return (
+      <div className="page">
+        <p className="note">Loading train…</p>
+      </div>
+    )
 
   const origin = svc.origin[0]
   const dest = svc.destination[0]
@@ -56,19 +79,25 @@ export function Service() {
 
   return (
     <div className="page service-page">
-      <header className="page-head service-head">
-        <p className="service-meta">
-          {svc.headcode && <span className="headcode">{svc.headcode}</span>}
-          <span>{svc.operator?.name ?? 'Operator not known'}</span>
-          <span>{longDate(svc.runDate)}</span>
-        </p>
-        <h1>
-          {origin?.name} to {dest?.name}
-        </h1>
-        <p className={`service-status status-${svc.status}`}>
-          {statusText[svc.status]}
-          {svc.plannedCancel && ', cancelled in the timetable'}
-        </p>
+      <header className="service-head">
+        <div className="table-head">
+          <h1>
+            {origin?.name} to {dest?.name}
+          </h1>
+          <p className="service-meta">
+            {svc.headcode && <span className="headcode">{svc.headcode}</span>}
+            <span>{svc.operator?.name ?? 'Operator not known'}</span>
+            <span>{longDate(svc.runDate)}</span>
+          </p>
+          <p className={`service-status status-${svc.status}`}>
+            <Signal aspect={running.aspect} />
+            <span>
+              {statusText[svc.status]}
+              {svc.plannedCancel && ', cancelled in the timetable'}
+              {running.late && `, ${running.late}`}
+            </span>
+          </p>
+        </div>
         {reason && <p className="reason">{reason}</p>}
         <div className="actions">
           <Link className="button" to={`/map?train=${svc.uid}|${svc.runDate}`}>
@@ -90,6 +119,12 @@ export function Service() {
         </label>
       )}
 
+      <div className="route-heads" aria-hidden="true">
+        <span>Times</span>
+        <span />
+        <span>Calling at</span>
+        <span>Plat</span>
+      </div>
       <ol className="route" aria-label="Route">
         {stops.map(({ s, i }) => (
           <RouteStop
@@ -103,7 +138,10 @@ export function Service() {
           />
         ))}
       </ol>
-      <p className="refreshed">Updates every 30 seconds. Train ID {svc.uid}{svc.source === 'vstp' ? ', added at short notice' : ''}.</p>
+      <p className="refreshed">
+        {live ? 'Live: updates as the train reports.' : 'Updates every 30 seconds.'} Train ID {svc.uid}
+        {svc.source === 'vstp' ? ', added at short notice' : ''}.
+      </p>
     </div>
   )
 }
@@ -124,9 +162,12 @@ function TimeCell({ t, label }: { t?: Times; label: string }) {
         <span className="rt-live">Delayed</span>
       ) : (
         changed && (
-          <span className={`rt-live${t.actual ? ' rt-actual' : ''}`} title={t.actual ? 'Actual' : 'Expected'}>
+          <span
+            className={`rt-live${t.actual && !(t.delayMinutes && t.delayMinutes > 0) ? ' rt-actual' : ''}${t.delayMinutes !== undefined && t.delayMinutes < 0 ? ' rt-early' : ''}`}
+            title={t.actual ? 'Actual' : 'Expected'}
+          >
             {t.actual ? '' : 'exp '}
-            {hhmm(live)}
+            <Flap value={hhmm(live)} />
           </span>
         )
       )}
