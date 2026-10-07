@@ -259,6 +259,36 @@ paths:
             application/geo+json:
               schema: { $ref: "#/components/schemas/StationMap" }
 
+  /v1/live:
+    get:
+      summary: Live change notifications (WebSocket)
+      operationId: live
+      description: |
+        Upgrade to a WebSocket to hear when boards, trains and the map change,
+        then refetch them with the endpoints above. Messages are JSON text
+        frames and carry topics, not data.
+
+        Send `{"type":"subscribe","topics":[…]}` or
+        `{"type":"unsubscribe","topics":[…]}`, up to 64 topics a connection:
+
+        - `station:<CRS or TIPLOC>`: that station's boards or messages may have changed
+        - `train:<uid>|<YYYY-MM-DD>`: that service may have changed
+        - `map`: train positions may have moved
+
+        The server sends `{"type":"hello","fallback":120}` first. Keep polling
+        every `fallback` seconds anyway: boards built on demand from Darwin
+        Lite are never pushed. Then `{"type":"changed","topics":[…]}` lists
+        the subscribed topics that changed, at most every 2 seconds, and
+        `{"type":"error","message":"…"}` reports bad input without closing
+        the connection. A client that falls far behind is disconnected and
+        should reconnect and refetch. Browser pages from other sites are
+        refused; clients that send no Origin header are accepted.
+      responses:
+        "101":
+          description: Switched to the WebSocket protocol.
+        "403":
+          description: The request came from another site's page.
+
   /healthz:
     get:
       summary: Liveness check

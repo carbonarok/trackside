@@ -3,6 +3,7 @@ module github.com/carbonarok/trackside
 go 1.25.7
 
 require (
+	github.com/coder/websocket v1.8.15
 	github.com/go-stomp/stomp/v3 v3.1.5
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/minio/minio-go/v7 v7.3.0

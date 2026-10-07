@@ -11,12 +11,15 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/carbonarok/trackside/internal/live"
 	"github.com/carbonarok/trackside/internal/ukrail"
 )
 
 // Applier writes Darwin messages to the database.
 type Applier struct {
 	Pool *pgxpool.Pool
+	// Live, if set, is told about every service and station a message changes.
+	Live *live.Hub
 }
 
 // ApplyMessage decodes and applies one Push Port message: a Kafka record
@@ -172,7 +175,11 @@ func (a *Applier) applyTS(ctx context.Context, ts *TrainStatus) error {
 		}
 		f.queue(batch, svc.id, st.seq, st.tiploc)
 	}
-	return a.Pool.SendBatch(ctx, batch).Close()
+	if err := a.Pool.SendBatch(ctx, batch).Close(); err != nil {
+		return err
+	}
+	a.Live.Service(svc.id)
+	return nil
 }
 
 // event is one forecast element converted to absolute times. set is false
@@ -257,7 +264,11 @@ func (a *Applier) applySchedule(ctx context.Context, s *Schedule) error {
 				arr_cancelled = EXCLUDED.arr_cancelled, dep_cancelled = EXCLUDED.dep_cancelled,
 				updated_at = now()`, svc.id, st.seq, st.tiploc, loc.Can)
 	}
-	return a.Pool.SendBatch(ctx, batch).Close()
+	if err := a.Pool.SendBatch(ctx, batch).Close(); err != nil {
+		return err
+	}
+	a.Live.Service(svc.id)
+	return nil
 }
 
 // applyAssociation stores a live association. It is keyed by RIDs, which
@@ -267,6 +278,10 @@ func (a *Applier) applyAssociation(ctx context.Context, as *Association) error {
 	if as.Main.RID == "" || as.Assoc.RID == "" || as.TIPLOC == "" {
 		return nil
 	}
+	defer func() {
+		a.Live.RID(as.Main.RID)
+		a.Live.RID(as.Assoc.RID)
+	}()
 	if as.Deleted {
 		_, err := a.Pool.Exec(ctx, `DELETE FROM darwin_associations
 			WHERE main_rid = $1 AND assoc_rid = $2 AND tiploc = $3 AND category = $4`,

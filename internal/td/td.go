@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/carbonarok/trackside/internal/live"
 	"github.com/carbonarok/trackside/internal/ukrail"
 )
 
@@ -36,6 +37,8 @@ var headcode = regexp.MustCompile(`^[0-9][A-Z][0-9]{2}$`)
 // Processor applies TD messages.
 type Processor struct {
 	Pool *pgxpool.Pool
+	// Live, if set, is told about every service a berth step changes.
+	Live *live.Hub
 	// Map is the SMART data in use. It can be replaced with SetMap while
 	// messages are being processed; until it is set, berth steps are ignored.
 	Map *Map
@@ -237,7 +240,11 @@ func (p *Processor) apply(ctx context.Context, descr, area, berth string, stepAt
 		batch.Queue(`UPDATE services SET td_approach_tiploc = NULL WHERE id = $1 AND td_approach_tiploc = $2`,
 			best.id, best.tiploc)
 	}
-	return p.Pool.SendBatch(ctx, batch).Close()
+	if err := p.Pool.SendBatch(ctx, batch).Close(); err != nil {
+		return err
+	}
+	p.Live.Service(best.id)
+	return nil
 }
 
 // approach records that a train has entered the berth before a station.
@@ -252,6 +259,9 @@ func (p *Processor) approach(ctx context.Context, descr, area, berth string, ste
 	_, err = p.Pool.Exec(ctx, `UPDATE services SET td_area = $2, td_berth = $3, td_berth_at = $4,
 		td_approach_tiploc = $5, td_approach_at = $4 WHERE id = $1`,
 		best.id, area, berth, stepAt, best.tiploc)
+	if err == nil {
+		p.Live.Service(best.id)
+	}
 	return err
 }
 

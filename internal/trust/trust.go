@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/carbonarok/trackside/internal/live"
 	"github.com/carbonarok/trackside/internal/schedule"
 	"github.com/carbonarok/trackside/internal/ukrail"
 )
@@ -62,6 +63,8 @@ type simple struct {
 // Applier writes TRUST messages to the database.
 type Applier struct {
 	Pool *pgxpool.Pool
+	// Live, if set, is told about every service a message changes.
+	Live *live.Hub
 	// Now is the clock used to bound train ID lookups; tests override it.
 	Now func() time.Time
 }
@@ -158,6 +161,9 @@ func (a *Applier) activate(ctx context.Context, b activation) error {
 		return tag.RowsAffected(), err
 	}
 	n, err := update()
+	if n > 0 {
+		a.Live.UID(uid)
+	}
 	if err != nil || n > 0 {
 		return err
 	}
@@ -168,6 +174,9 @@ func (a *Applier) activate(ctx context.Context, b activation) error {
 	}
 	if n, err = update(); err == nil && n == 0 {
 		slog.Debug("activation for train with no schedule", "uid", uid, "date", b.OriginDate)
+	}
+	if n > 0 {
+		a.Live.UID(uid)
 	}
 	return err
 }
@@ -205,7 +214,9 @@ func (a *Applier) exec(ctx context.Context, trainID, sql string, args ...any) er
 	if err != nil {
 		return err
 	}
-	_, err = a.Pool.Exec(ctx, sql, append([]any{id}, args...)...)
+	if _, err = a.Pool.Exec(ctx, sql, append([]any{id}, args...)...); err == nil {
+		a.Live.Service(id)
+	}
 	return err
 }
 
@@ -355,6 +366,9 @@ func (a *Applier) move(ctx context.Context, b movement) error {
 			SET actual = EXCLUDED.actual, tiploc = EXCLUDED.tiploc, source = EXCLUDED.source,
 			    platform = COALESCE(EXCLUDED.platform, service_events.platform)`,
 		id, cands[best].seq, cands[best].tiploc, bestEvent, actual, nullIfBlank(b.Platform))
+	if err == nil {
+		a.Live.Service(id)
+	}
 	return err
 }
 

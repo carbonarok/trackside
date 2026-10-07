@@ -3,10 +3,13 @@ package darwin
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"html"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // StationMessage (OW) is a notice for one or more stations.
@@ -52,7 +55,15 @@ func (a *Applier) applyMessage(ctx context.Context, m *StationMessage) error {
 		}
 	}
 	if len(stations) == 0 {
-		_, err := a.Pool.Exec(ctx, `DELETE FROM station_messages WHERE id = $1`, id)
+		// A withdrawn message leaves the boards it was on.
+		var was []string
+		err := a.Pool.QueryRow(ctx, `DELETE FROM station_messages WHERE id = $1 RETURNING stations`, id).Scan(&was)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		if err == nil {
+			a.Live.Stations(was...)
+		}
 		return err
 	}
 	sev, _ := strconv.Atoi(m.Severity)
@@ -63,6 +74,9 @@ func (a *Applier) applyMessage(ctx context.Context, m *StationMessage) error {
 			suppress = EXCLUDED.suppress, html = EXCLUDED.html, text = EXCLUDED.text,
 			stations = EXCLUDED.stations, updated_at = now()`,
 		id, m.Category, sev, m.Suppress, htmlBody, text, stations)
+	if err == nil {
+		a.Live.Stations(stations...)
+	}
 	return err
 }
 

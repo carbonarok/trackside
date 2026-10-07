@@ -52,6 +52,9 @@ own copy for free, with their own feed credentials.
   pointing the way it's going. Positions come from the last reported location
   and the timetable, so trains between stations are estimates. Also available
   as GeoJSON.
+- **Live updates:** boards, train pages and the map refresh when a train
+  reports, not on a timer. A WebSocket (`/v1/live`) tells each page what
+  changed, and API clients can use it too.
 - **History:** each day's actual times are kept (400 days by default), with
   punctuality stats per station and per train.
 - **Delay Repay checker:** how late a journey arrived, which compensation
@@ -369,6 +372,7 @@ TIPLOC (`CLPHMJN`). A CRS code covers every TIPLOC at that station.
 | `GET /v1/stats/locations/{code}` | Punctuality at a station |
 | `GET /v1/delay-repay?from=BTN&to=VIC&date=…&departure=08:15` | How late a journey arrived, and its Delay Repay band |
 | `GET /v1/map/trains`, `GET /v1/map/stations` | Train positions and stations as GeoJSON |
+| `GET /v1/live` | WebSocket: hear when boards, trains and the map change (see below) |
 | `GET /healthz` | Liveness |
 | `GET /openapi.yaml`, `GET /docs` | API reference |
 
@@ -398,6 +402,26 @@ also report `approaching` and `atPlatform`, and platforms carry `confirmed`. Ser
 service also gets `cancelReasonCode`, the TRUST delay attribution code (for
 example `IA`), and `cancelReasonCodeDescription`, the industry description of
 that code ("Signal failure (including no fault found)").
+
+### Live updates
+
+`/v1/live` is a WebSocket that tells you when something changed, so you
+refetch only then instead of polling. The website uses it for boards, train
+pages and the map.
+
+```js
+const ws = new WebSocket('ws://localhost:8080/v1/live')
+ws.onopen = () => ws.send(JSON.stringify({ type: 'subscribe', topics: ['station:CLJ', 'train:W12345|2026-10-06'] }))
+ws.onmessage = e => console.log(JSON.parse(e.data)) // {"type":"changed","topics":["station:CLJ"]}
+```
+
+Topics are `station:<CRS or TIPLOC>`, `train:<uid>|<YYYY-MM-DD>` and `map`.
+Changes are gathered for 2 seconds and sent together. A train's change is sent
+to every station it calls at or passes, since a delay carries forward along
+the route. Messages say what changed, not how: refetch with the REST
+endpoints. The first message is `{"type":"hello","fallback":120}`, the number
+of seconds to keep polling at anyway. It is 30 with Darwin Lite, whose boards
+are fetched on demand and never pushed.
 
 ### Realtime Trains–compatible endpoints
 

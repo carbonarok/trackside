@@ -29,6 +29,7 @@ import (
 	"github.com/carbonarok/trackside/internal/history"
 	"github.com/carbonarok/trackside/internal/inbox"
 	"github.com/carbonarok/trackside/internal/ldb"
+	"github.com/carbonarok/trackside/internal/live"
 	"github.com/carbonarok/trackside/internal/naptan"
 	"github.com/carbonarok/trackside/internal/schedule"
 	"github.com/carbonarok/trackside/internal/td"
@@ -393,7 +394,17 @@ func serve(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config) error {
 		store.Live = lite
 		slog.Info("using Darwin Lite for live boards (on demand, cached)")
 	}
+	// Browsers learn what changed over a WebSocket and refetch only then.
+	// Darwin Lite boards are fetched on demand and never pushed, so clients
+	// keep polling those more often.
+	hub := live.New(live.NewResolver(pool))
+	if store.Live != nil {
+		hub.Fallback = 30
+	}
+	go hub.Run(ctx)
+
 	mux := http.NewServeMux()
+	mux.Handle("GET /v1/live", hub)
 	hist := &history.Querier{Pool: pool, Store: store}
 	(&api.Server{Store: store, History: hist}).Register(mux)
 	(&compat.Server{Store: store}).Register(mux)
@@ -423,20 +434,29 @@ func serve(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config) error {
 	}
 
 	stompTopics := map[string]feeds.Handler{}
-	trustApplier := &trust.Applier{Pool: pool}
+	trustApplier := &trust.Applier{Pool: pool, Live: hub}
 	startFeed(ctx, stompTopics, "TRUST", "TRAIN_MVT_ALL_TOC", trustApplier.ApplyFrame)
 	startFeed(ctx, stompTopics, "VSTP", "VSTP_ALL", func(ctx context.Context, body []byte) error {
 		rec, err := schedule.ParseVSTP(body)
 		if err != nil {
 			return err
 		}
-		return schedule.ApplyVSTP(ctx, pool, rec, time.Now())
+		if err := schedule.ApplyVSTP(ctx, pool, rec, time.Now()); err != nil {
+			return err
+		}
+		switch {
+		case rec.Schedule != nil:
+			hub.UID(rec.Schedule.TrainUID)
+		case rec.Delete != nil:
+			hub.UID(rec.Delete.TrainUID)
+		}
+		return nil
 	})
 	smart, n, err := td.LoadMap(ctx, pool)
 	if err != nil {
 		return err
 	}
-	tdProc := &td.Processor{Pool: pool, Map: smart}
+	tdProc := &td.Processor{Pool: pool, Map: smart, Live: hub}
 	var tdMu sync.Mutex
 	tdStarted := n > 0
 	if tdStarted {
@@ -491,7 +511,7 @@ func serve(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config) error {
 			slog.Warn("no live Network Rail feeds: set NR_USERNAME/NR_PASSWORD or RDM_<FEED>_* (see README)")
 		}
 	}
-	darwinApplier := &darwin.Applier{Pool: pool}
+	darwinApplier := &darwin.Applier{Pool: pool, Live: hub}
 	switch {
 	case darwinStream.Enabled():
 		go consumeKafka(ctx, "Darwin", darwinStream, darwinApplier.ApplyMessage)
