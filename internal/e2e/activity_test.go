@@ -187,8 +187,15 @@ func TestLiveActivityPushes(t *testing.T) {
 			t.Errorf("state %+v", cs)
 		}
 		// A 9-minute arrival delay, up from on time, is worth an alert.
-		if p.APS.Alert == nil || p.APS.Alert.Title != "Running late" || n.Priority != 10 {
+		if p.APS.Alert == nil || p.APS.Alert.Title != "Running late" || p.APS.Alert.Sound != "default" || n.Priority != 10 {
 			t.Errorf("alert %+v priority %d", p.APS.Alert, n.Priority)
+		}
+		// The alert names the station the train is left at.
+		if p.APS.Alert != nil && !strings.Contains(p.APS.Alert.Body, "arrives at Wimbledon") {
+			t.Errorf("alert body %q", p.APS.Alert.Body)
+		}
+		if !strings.Contains(string(n.Payload), `"sound":"default"`) {
+			t.Errorf("payload has no sound: %s", n.Payload)
 		}
 		if !strings.Contains(string(p.APS.ContentState), `"departureDate":`+fmt.Sprint(time.Date(2026, 10, 6, 7, 9, 0, 0, time.UTC).Unix()-978307200)) {
 			t.Errorf("departureDate not seconds since 2001: %s", p.APS.ContentState)
@@ -369,5 +376,103 @@ func TestLiveActivityConnections(t *testing.T) {
 	_, cs := decode(t, got[0])
 	if cs.ConnectionMinutes == nil || *cs.ConnectionMinutes != 22 {
 		t.Errorf("pushed connection %v, want 22", cs.ConnectionMinutes)
+	}
+}
+
+func TestLiveActivityNotifications(t *testing.T) {
+	pool, _ := setup(t)
+	ctx := context.Background()
+	clock := time.Date(2026, 10, 6, 7, 50, 0, 0, ukrail.London)
+	now := func() time.Time { return clock }
+	store := &timetable.Store{Pool: pool, Now: now}
+	srv := &activity.Server{Pool: pool, Store: store, Enabled: true, Now: now}
+	mux := http.NewServeMux()
+	srv.Register(mux)
+	api := httptest.NewServer(mux)
+	defer api.Close()
+
+	device := strings.Repeat("f6", 32)
+	body, _ := json.Marshal(map[string]any{
+		"push_token": strings.Repeat("a7", 32), "activity_id": "act-n", "service_uid": "W10001",
+		"run_date": "2026-10-06", "origin_crs": "WAT", "destination_crs": "WIM",
+		"bundle_id": "com.example.TrackSideIOS", "device_token": device,
+	})
+	resp, err := http.Post(api.URL+"/v1/activities/register", "application/json", bytes.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("register: %d", resp.StatusCode)
+	}
+
+	fake := &fakeAPNs{}
+	pusher := activity.NewPusher(pool, store, fake, apns.Production)
+	pusher.Now = now
+	// The platform last sent was 9; it's 5 now.
+	plant := func() {
+		if _, err := pool.Exec(ctx, `UPDATE live_activities SET last_state = jsonb_set(last_state, '{departurePlatform}', '"9"')`); err != nil {
+			t.Fatal(err)
+		}
+	}
+	plant()
+	clock = clock.Add(5 * time.Minute)
+	if err := pusher.Push(ctx, live.Changes{UIDs: []string{"W10001"}}); err != nil {
+		t.Fatal(err)
+	}
+	got := fake.take()
+	if len(got) != 2 {
+		t.Fatalf("%d notifications, want 2 (the activity and the device)", len(got))
+	}
+	activityPush, devicePush := got[0], got[1]
+	p, cs := decode(t, activityPush)
+	if activityPush.n.PushType != "liveactivity" || p.APS.Alert != nil || activityPush.n.Priority != 10 {
+		t.Errorf("activity push: type %s alert %+v priority %d; want a silent, immediate update",
+			activityPush.n.PushType, p.APS.Alert, activityPush.n.Priority)
+	}
+	if !cs.DeparturePlatformChanged || cs.DeparturePlatform == nil || *cs.DeparturePlatform != "5" {
+		t.Errorf("activity shows platform %v changed=%v; want 5, changed", cs.DeparturePlatform, cs.DeparturePlatformChanged)
+	}
+	if devicePush.n.PushType != "alert" || devicePush.n.Topic != "com.example.TrackSideIOS" || devicePush.n.DeviceToken != device {
+		t.Errorf("device push %+v", devicePush.n)
+	}
+	var note struct {
+		APS struct {
+			Alert    activity.Alert `json:"alert"`
+			Sound    string         `json:"sound"`
+			ThreadID string         `json:"thread-id"`
+		} `json:"aps"`
+	}
+	json.Unmarshal(devicePush.n.Payload, &note)
+	if note.APS.Alert.Title != "Platform changed: now 5" || !strings.Contains(note.APS.Alert.Body, "from platform 5, not 9") ||
+		note.APS.Sound != "default" || note.APS.ThreadID != "trackside-W10001-2026-10-06" {
+		t.Errorf("notification %+v", note.APS)
+	}
+
+	// A device token APNs rejects is forgotten; the activity carries on and
+	// falls back to its own alerts.
+	fake.answer = func(_, token string) apns.Response {
+		if token == device {
+			return apns.Response{Status: http.StatusGone, Reason: "Unregistered"}
+		}
+		return apns.Response{Status: http.StatusOK}
+	}
+	plant()
+	clock = clock.Add(time.Minute)
+	if err := pusher.Push(ctx, live.Changes{UIDs: []string{"W10001"}}); err != nil {
+		t.Fatal(err)
+	}
+	fake.take()
+	var token *string
+	var n int
+	pool.QueryRow(ctx, `SELECT device_token, count(*) OVER () FROM live_activities`).Scan(&token, &n)
+	if n != 1 || token != nil {
+		t.Errorf("after 410: %d activities, device token %v; want the activity kept and the token forgotten", n, token)
+	}
+	plant()
+	clock = clock.Add(time.Minute)
+	pusher.Push(ctx, live.Changes{UIDs: []string{"W10001"}})
+	if got := fake.take(); len(got) != 1 || !strings.Contains(string(got[0].n.Payload), `"alert"`) {
+		t.Errorf("without a device token the activity should carry the alert itself: %d pushes", len(got))
 	}
 }

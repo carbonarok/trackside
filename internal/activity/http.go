@@ -60,6 +60,10 @@ type Registration struct {
 	PreviousServiceUID string `json:"previous_service_uid,omitempty"`
 	PreviousRunDate    string `json:"previous_run_date,omitempty"`
 	PreviousArrivalCRS string `json:"previous_arrival_crs,omitempty"`
+	// Optional: the device's APNs token (from registerForRemoteNotifications),
+	// hex-encoded. With it, changes worth an alert also arrive as a normal
+	// notification, with their text in Notification Center.
+	DeviceToken string `json:"device_token,omitempty"`
 }
 
 // previous is a registration's previous leg, once normalised.
@@ -103,6 +107,10 @@ func (r *Registration) normalise() (time.Time, *previous, error) {
 	date, err := time.Parse(time.DateOnly, r.RunDate)
 	if err != nil {
 		return time.Time{}, nil, errors.New("run_date must be YYYY-MM-DD")
+	}
+	r.DeviceToken = strings.ToLower(strings.TrimSpace(r.DeviceToken))
+	if r.DeviceToken != "" && (!hexToken.MatchString(r.DeviceToken) || len(r.DeviceToken)%2 != 0) {
+		return time.Time{}, nil, errors.New("device_token must be the hex-encoded APNs device token")
 	}
 	r.PreviousServiceUID = strings.ToUpper(strings.TrimSpace(r.PreviousServiceUID))
 	if r.PreviousServiceUID == "" {
@@ -203,8 +211,8 @@ func (s *Server) register(w http.ResponseWriter, r *http.Request) {
 	err = s.Pool.QueryRow(r.Context(), `
 		INSERT INTO live_activities (activity_id, push_token, bundle_id, train_uid, run_date,
 			origin_crs, destination_crs, connection_minutes, last_state,
-			previous_train_uid, previous_run_date, previous_arrival_crs)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+			previous_train_uid, previous_run_date, previous_arrival_crs, device_token)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NULLIF($13, ''))
 		ON CONFLICT (activity_id) DO UPDATE SET
 			push_token = EXCLUDED.push_token, bundle_id = EXCLUDED.bundle_id,
 			train_uid = EXCLUDED.train_uid, run_date = EXCLUDED.run_date,
@@ -213,6 +221,7 @@ func (s *Server) register(w http.ResponseWriter, r *http.Request) {
 			previous_train_uid = EXCLUDED.previous_train_uid,
 			previous_run_date = EXCLUDED.previous_run_date,
 			previous_arrival_crs = EXCLUDED.previous_arrival_crs,
+			device_token = COALESCE(EXCLUDED.device_token, live_activities.device_token),
 			apns_host = CASE WHEN live_activities.push_token = EXCLUDED.push_token
 			                 THEN live_activities.apns_host END,
 			last_state = COALESCE(live_activities.last_state, EXCLUDED.last_state),
@@ -220,7 +229,7 @@ func (s *Server) register(w http.ResponseWriter, r *http.Request) {
 		RETURNING (xmax = 0)`,
 		reg.ActivityID, reg.PushToken, reg.BundleID, reg.ServiceUID, date,
 		reg.OriginCRS, reg.DestinationCRS, reg.ConnectionMinutes, initial,
-		prevUID, prevDate, prevCRS).Scan(&inserted)
+		prevUID, prevDate, prevCRS, reg.DeviceToken).Scan(&inserted)
 	if err != nil {
 		serverError(w, err)
 		return

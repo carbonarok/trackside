@@ -110,6 +110,8 @@ type registration struct {
 	PrevUID     *string
 	PrevRunDate *time.Time
 	PrevCRS     *string
+	// The device's own token, for normal notifications.
+	DeviceToken *string
 }
 
 // Push sends updates to every activity whose train, or previous leg's
@@ -121,7 +123,7 @@ func (p *Pusher) Push(ctx context.Context, c live.Changes) error {
 	rows, err := p.Pool.Query(ctx, `
 		SELECT a.activity_id, a.push_token, a.bundle_id, a.train_uid, a.run_date, a.origin_crs,
 		       a.destination_crs, a.connection_minutes, a.apns_host, a.last_state, a.last_timestamp,
-		       a.previous_train_uid, a.previous_run_date, a.previous_arrival_crs
+		       a.previous_train_uid, a.previous_run_date, a.previous_arrival_crs, a.device_token
 		FROM live_activities a
 		WHERE a.train_uid = ANY($2) OR a.previous_train_uid = ANY($2)
 		   OR EXISTS (SELECT 1 FROM services sv
@@ -136,7 +138,8 @@ func (p *Pusher) Push(ctx context.Context, c live.Changes) error {
 		var g registration
 		var last []byte
 		err := r.Scan(&g.ID, &g.Token, &g.Bundle, &g.UID, &g.RunDate, &g.Origin, &g.Destination,
-			&g.ConnectionMinutes, &g.Host, &last, &g.LastTimestamp, &g.PrevUID, &g.PrevRunDate, &g.PrevCRS)
+			&g.ConnectionMinutes, &g.Host, &last, &g.LastTimestamp, &g.PrevUID, &g.PrevRunDate, &g.PrevCRS,
+			&g.DeviceToken)
 		if err == nil && last != nil {
 			g.Last = &ContentState{}
 			if json.Unmarshal(last, g.Last) != nil {
@@ -214,6 +217,7 @@ func (p *Pusher) update(ctx context.Context, g registration, d *api.ServiceDetai
 	leg := Leg{OriginCRS: g.Origin, DestinationCRS: g.Destination, ConnectionMinutes: g.ConnectionMinutes}
 	if g.Last != nil {
 		leg.Phase = g.Last.Phase
+		leg.Last = g.Last
 	}
 	next, ok := State(*d, leg, now)
 	if !ok {
@@ -223,10 +227,20 @@ func (p *Pusher) update(ctx context.Context, g registration, d *api.ServiceDetai
 	if g.Last != nil && next.sameAs(*g.Last) {
 		return // the change was something the activity doesn't show
 	}
-	alert := AlertFor(g.Last, next, d.Headcode)
+	t := Train{Headcode: d.Headcode}
+	if from, to, ok := Endpoints(*d, g.Origin, g.Destination); ok {
+		t.From, t.To = from.Name, to.Name
+	}
+	alert := AlertFor(g.Last, next, t)
 	// The timestamp orders updates on the device, so it must always rise.
 	ts := max(now.Unix(), g.LastTimestamp+1)
 	body := aps{Timestamp: ts, Event: "update", ContentState: next, Alert: alert}
+	// With the device's token the alert goes as a normal notification, whose
+	// text shows; the activity then updates without one, so it buzzes once.
+	notify := alert != nil && g.DeviceToken != nil
+	if notify {
+		body.Alert = nil
+	}
 	ended := next.Phase == PhaseArrived
 	if ended {
 		body.Event = "end"
@@ -263,6 +277,9 @@ func (p *Pusher) update(ctx context.Context, g registration, d *api.ServiceDetai
 		slog.Warn("live activities: apns unreachable", "activity", g.ID, "err", err)
 	case resp.OK() && ended:
 		// Journey complete: nothing more to send.
+		if notify {
+			p.notify(ctx, g, host, *alert)
+		}
 		p.remove(ctx, g.ID, "arrived")
 	case resp.OK():
 		state, _ := json.Marshal(next)
@@ -271,12 +288,48 @@ func (p *Pusher) update(ctx context.Context, g registration, d *api.ServiceDetai
 			g.ID, state, ts, host, g.Token); err != nil {
 			slog.Warn("live activities: save state", "activity", g.ID, "err", err)
 		}
+		if notify {
+			p.notify(ctx, g, host, *alert)
+		}
 	case resp.Gone():
 		p.remove(ctx, g.ID, "ended on the device")
 	case resp.BadToken():
 		p.remove(ctx, g.ID, "token rejected in both environments")
 	default:
 		slog.Warn("live activities: apns refused", "activity", g.ID, "status", resp.Status, "reason", resp.Reason)
+	}
+}
+
+// notify sends the alert as a normal notification to the device, grouped
+// per train. A token APNs rejects is forgotten; the activity's own alerts
+// then take over.
+func (p *Pusher) notify(ctx context.Context, g registration, host string, a Alert) {
+	payload, _ := json.Marshal(map[string]any{"aps": map[string]any{
+		"alert":     map[string]string{"title": a.Title, "body": a.Body},
+		"sound":     alertSound,
+		"thread-id": "trackside-" + g.UID + "-" + g.RunDate.Format(time.DateOnly),
+	}})
+	n := apns.Notification{
+		DeviceToken: *g.DeviceToken,
+		Topic:       g.Bundle,
+		PushType:    "alert",
+		Priority:    10,
+		Payload:     payload,
+	}
+	resp, err := p.APNs.Send(ctx, host, n)
+	if err == nil && resp.BadToken() {
+		resp, err = p.APNs.Send(ctx, otherHost(host), n)
+	}
+	switch {
+	case err != nil:
+		slog.Warn("live activities: notification unreachable", "activity", g.ID, "err", err)
+	case resp.OK():
+	case resp.Gone() || resp.BadToken():
+		if _, err := p.Pool.Exec(ctx, `UPDATE live_activities SET device_token = NULL WHERE device_token = $1`, *g.DeviceToken); err != nil {
+			slog.Warn("live activities: forget device token", "err", err)
+		}
+	default:
+		slog.Warn("live activities: notification refused", "activity", g.ID, "status", resp.Status, "reason", resp.Reason)
 	}
 }
 

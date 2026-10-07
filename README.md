@@ -456,8 +456,12 @@ liveactivity`, but only if something the activity shows has changed. Dates
 in it (`departureDate`, `arrivalDate`, `lastUpdated`) are seconds since 1
 January 2001, which is how Swift decodes a `Date` by default. An alert,
 sent at priority 10, accompanies a platform change, a cancellation, or a
-delay that grows by 3 minutes or more to at least 5. Other updates go at
-priority 5.
+delay that grows by 3 minutes or more to at least 5, with the default sound.
+Other updates go at priority 5. iOS shows a Live Activity's alert on the
+activity rather than as a notification, so if the registration includes the
+device's own APNs token (`device_token`) the alert is sent to it as a normal
+notification instead, and the activity updates silently. A platform that
+changes while the leg is tracked stays marked changed until the leg ends.
 
 Arrival at the destination sends an `end` event and removes the
 registration, as does an APNs `410`. Registrations with nothing sent for six

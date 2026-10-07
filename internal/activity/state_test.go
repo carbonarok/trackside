@@ -171,6 +171,7 @@ func TestCancellation(t *testing.T) {
 }
 
 func TestAlerts(t *testing.T) {
+	train := Train{Headcode: "2C27", From: "Woking", To: "Reading"}
 	base, _ := State(service(), leg, *at("11:40"))
 	with := func(f func(*ContentState)) ContentState {
 		s := base
@@ -187,8 +188,8 @@ func TestAlerts(t *testing.T) {
 	}{
 		{"first state", nil, base, ""},
 		{"nothing changed", &base, base, ""},
-		{"departure platform", &base, with(func(s *ContentState) { s.DeparturePlatform = str("5") }), "Platform changed"},
-		{"arrival platform", &base, with(func(s *ContentState) { s.ArrivalPlatform = str("7") }), "Arrival platform changed"},
+		{"departure platform", &base, with(func(s *ContentState) { s.DeparturePlatform = str("5") }), "Platform changed: now 5"},
+		{"arrival platform", &base, with(func(s *ContentState) { s.ArrivalPlatform = str("7") }), "Arrival platform changed: now 7"},
 		{"platform first announced", ptr(with(func(s *ContentState) { s.DeparturePlatform = nil })), base, ""},
 		{"cancelled", &base, with(func(s *ContentState) { s.IsCancelled = true }), "Train cancelled"},
 		{"delay grew 0 to 6", &base, with(func(s *ContentState) { s.DepartureDelayMinutes = 6; s.ExpectedDeparture = str("12:04") }), "Running late"},
@@ -201,7 +202,7 @@ func TestAlerts(t *testing.T) {
 			with(func(s *ContentState) { s.Phase = PhaseOnTrain; s.DeparturePlatform = str("9") }), ""},
 	}
 	for _, c := range cases {
-		a := AlertFor(c.prev, c.next, "2C27")
+		a := AlertFor(c.prev, c.next, train)
 		switch {
 		case c.title == "" && a != nil:
 			t.Errorf("%s: unexpected alert %+v", c.name, a)
@@ -209,8 +210,24 @@ func TestAlerts(t *testing.T) {
 			t.Errorf("%s: alert %+v, want %q", c.name, a, c.title)
 		}
 	}
-	if a := AlertFor(&base, with(func(s *ContentState) { s.DeparturePlatform = str("5") }), "2C27"); a.Body != "2C27: Platform changed to 5" {
-		t.Errorf("platform body %q", a.Body)
+	bodies := []struct {
+		next ContentState
+		body string
+	}{
+		{with(func(s *ContentState) { s.DeparturePlatform = str("5") }), "2C27 now leaves Woking from platform 5, not 2."},
+		{with(func(s *ContentState) { s.ArrivalPlatform = str("7") }), "2C27 now arrives at Reading on platform 7, not 4."},
+		{with(func(s *ContentState) { s.DepartureDelayMinutes = 6; s.ExpectedDeparture = str("12:04") }), "2C27 is now 6 min late and leaves Woking at 12:04."},
+		{with(func(s *ContentState) { s.IsCancelled = true; s.CancelReason = str("A fault on this train.") }), "2C27 has been cancelled. A fault on this train."},
+	}
+	for _, b := range bodies {
+		a := AlertFor(&base, b.next, train)
+		if a == nil || a.Body != b.body || a.Sound != "default" {
+			t.Errorf("alert %+v, want body %q with the default sound", a, b.body)
+		}
+	}
+	// Without station names it still reads.
+	if a := AlertFor(&base, with(func(s *ContentState) { s.DeparturePlatform = str("5") }), Train{}); a.Body != "Your train now leaves from platform 5, not 2." {
+		t.Errorf("nameless body %q", a.Body)
 	}
 }
 
@@ -244,5 +261,25 @@ func TestConnection(t *testing.T) {
 	}
 	if Connection(prev, "GLD", service(), "WOK") != nil || Connection(prev, "WOK", service(), "PAD") != nil {
 		t.Error("found a connection at a station one of the trains doesn't call at")
+	}
+}
+
+func TestPlatformChangedWhileTracked(t *testing.T) {
+	first, _ := State(service(), leg, *at("11:00"))
+	if first.DeparturePlatformChanged {
+		t.Fatal("booked platform marked changed")
+	}
+	// The platform moves from 2 to 5 without the feed calling it a change
+	// (say, the booked platform itself was revised).
+	d := service()
+	d.Stops[0].Platform = &api.Platform{Planned: "5"}
+	moved, _ := State(d, Leg{OriginCRS: "WOK", DestinationCRS: "RDG", Last: &first}, *at("11:10"))
+	if !moved.DeparturePlatformChanged {
+		t.Error("platform that moved while tracked isn't marked changed")
+	}
+	// It stays marked on later updates while it's still there.
+	later, _ := State(d, Leg{OriginCRS: "WOK", DestinationCRS: "RDG", Last: &moved}, *at("11:20"))
+	if !later.DeparturePlatformChanged || later.ArrivalPlatformChanged {
+		t.Errorf("later: departure changed=%v arrival changed=%v", later.DeparturePlatformChanged, later.ArrivalPlatformChanged)
 	}
 }

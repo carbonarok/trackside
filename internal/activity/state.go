@@ -94,6 +94,9 @@ type Leg struct {
 	// Phase is the phase last sent (or the app's, at registration). Phases
 	// never go backwards.
 	Phase string
+	// Last is the state last sent, if any. A platform that changes while the
+	// leg is tracked stays marked changed, as one the feeds call changed does.
+	Last *ContentState
 }
 
 // Endpoints finds the leg's boarding and alighting stops in the service:
@@ -177,6 +180,12 @@ func State(d api.ServiceDetail, leg Leg, now time.Time) (ContentState, bool) {
 	}
 	if to.Platform != nil {
 		s.ArrivalPlatformChanged = to.Platform.Changed
+	}
+	if p := leg.Last; p != nil {
+		s.DeparturePlatformChanged = s.DeparturePlatformChanged ||
+			movedSince(p.DeparturePlatform, p.DeparturePlatformChanged, s.DeparturePlatform)
+		s.ArrivalPlatformChanged = s.ArrivalPlatformChanged ||
+			movedSince(p.ArrivalPlatform, p.ArrivalPlatformChanged, s.ArrivalPlatform)
 	}
 	if s.IsCancelled {
 		switch {
@@ -277,12 +286,17 @@ func appleDate(t *time.Time) *AppleDate {
 	return &AppleDate{*t}
 }
 
-// Alert is the aps alert shown on the lock screen for a change worth
-// interrupting someone for.
+// Alert is the aps alert for a change worth interrupting someone for. With
+// a sound, iOS lights the screen, plays the notification sound (or vibrates
+// when silenced) and expands the Live Activity; without one it only expands.
 type Alert struct {
 	Title string `json:"title"`
 	Body  string `json:"body"`
+	Sound string `json:"sound,omitempty"`
 }
+
+// alertSound is the system's default notification sound.
+const alertSound = "default"
 
 // delayAlertRise and delayAlertFloor gate delay alerts: the delay must have
 // grown by at least the rise and reached at least the floor.
@@ -291,43 +305,85 @@ const (
 	delayAlertFloor = 5
 )
 
+// Train names a leg for alert text: the train's headcode, and the stations
+// it is boarded and left at.
+type Train struct {
+	Headcode string
+	From, To string
+}
+
+func (t Train) name() string {
+	if t.Headcode == "" {
+		return "Your train"
+	}
+	return t.Headcode
+}
+
+// atStation is " at <station>", or nothing when the station isn't known.
+func atStation(station string) string {
+	if station == "" {
+		return ""
+	}
+	return " at " + station
+}
+
 // AlertFor decides whether moving from prev to next deserves an alert:
 // a cancellation, a platform change, or a delay that grew by 3 or more
 // minutes to 5 or more. The first state sent never alerts.
-func AlertFor(prev *ContentState, next ContentState, headcode string) *Alert {
+func AlertFor(prev *ContentState, next ContentState, t Train) *Alert {
 	if prev == nil {
 		return nil
 	}
-	name := headcode
-	if name == "" {
-		name = "Your train"
-	}
+	alert := func(title, body string) *Alert { return &Alert{Title: title, Body: body, Sound: alertSound} }
+	name := t.name()
 	switch {
 	case next.IsCancelled && !prev.IsCancelled:
 		body := name + " has been cancelled."
 		if next.CancelReason != nil {
 			body += " " + *next.CancelReason
 		}
-		return &Alert{Title: "Train cancelled", Body: body}
+		return alert("Train cancelled", body)
 	case next.Phase != PhaseOnTrain && next.Phase != PhaseArrived && changed(prev.DeparturePlatform, next.DeparturePlatform):
-		return &Alert{Title: "Platform changed", Body: fmt.Sprintf("%s: Platform changed to %s", name, *next.DeparturePlatform)}
+		from := "now leaves"
+		if t.From != "" {
+			from += " " + t.From
+		}
+		return alert("Platform changed: now "+*next.DeparturePlatform,
+			fmt.Sprintf("%s %s from platform %s, not %s.", name, from, *next.DeparturePlatform, *prev.DeparturePlatform))
 	case next.Phase != PhaseArrived && changed(prev.ArrivalPlatform, next.ArrivalPlatform):
-		return &Alert{Title: "Arrival platform changed", Body: fmt.Sprintf("%s: Now arriving at platform %s", name, *next.ArrivalPlatform)}
+		to := "now arrives"
+		if t.To != "" {
+			to += " at " + t.To
+		}
+		return alert("Arrival platform changed: now "+*next.ArrivalPlatform,
+			fmt.Sprintf("%s %s on platform %s, not %s.", name, to, *next.ArrivalPlatform, *prev.ArrivalPlatform))
 	}
 	// Before departure the departure delay matters; after it, the arrival's.
-	was, now, at := prev.DepartureDelayMinutes, next.DepartureDelayMinutes, next.ExpectedDeparture
-	verb := "departs"
+	was, now, when, verb, where := prev.DepartureDelayMinutes, next.DepartureDelayMinutes, next.ExpectedDeparture, "leaves", t.From
 	if next.Phase == PhaseOnTrain {
-		was, now, at, verb = prev.ArrivalDelayMinutes, next.ArrivalDelayMinutes, next.ExpectedArrival, "arrives"
+		was, now, when, verb, where = prev.ArrivalDelayMinutes, next.ArrivalDelayMinutes, next.ExpectedArrival, "arrives", t.To
 	}
 	if next.Phase != PhaseArrived && now-was >= delayAlertRise && now >= delayAlertFloor {
 		body := fmt.Sprintf("%s is now %d min late", name, now)
-		if at != nil {
-			body += fmt.Sprintf(" and %s at %s", verb, *at)
+		if when != nil {
+			if verb == "leaves" && where != "" {
+				body += fmt.Sprintf(" and leaves %s at %s", where, *when)
+			} else {
+				body += fmt.Sprintf(" and %s%s at %s", verb, atStation(where), *when)
+			}
 		}
-		return &Alert{Title: "Running late", Body: body + "."}
+		return alert("Running late", body+".")
 	}
 	return nil
+}
+
+// movedSince reports whether a platform has changed while being tracked: it
+// moved since the last state sent, or had moved before and is still there.
+func movedSince(was *string, wasChanged bool, now *string) bool {
+	if was == nil || now == nil {
+		return false
+	}
+	return *was != *now || wasChanged
 }
 
 // changed reports a platform moving from one known value to another.
