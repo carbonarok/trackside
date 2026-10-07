@@ -94,6 +94,8 @@ func TestServiceChangeReachesStationAndTrainSubscribers(t *testing.T) {
 		}
 		return []string{"station:WAT", "station:CLJ", "train:W12345|2026-10-06"}, nil
 	})
+	var invalidated []string
+	h.OnTopics = func(topics []string) { invalidated = topics }
 	board := connect(t, h)
 	subscribe(t, h, board, "station:WAT", "station:EUS")
 	train := connect(t, h)
@@ -102,6 +104,13 @@ func TestServiceChangeReachesStationAndTrainSubscribers(t *testing.T) {
 	h.Service(7)
 	h.Service(7) // reported twice, flushed once
 	h.Flush(context.Background())
+
+	// Cached boards hear about every changed topic, watched or not, before
+	// any browser does.
+	slices.Sort(invalidated)
+	if want := []string{"map", "station:CLJ", "station:WAT", "train:W12345|2026-10-06"}; !slices.Equal(invalidated, want) {
+		t.Errorf("OnTopics got %v, want %v", invalidated, want)
+	}
 
 	if m := receive(t, board); m.Type != "changed" || !slices.Equal(m.Topics, []string{"station:WAT"}) {
 		t.Errorf("board got %+v, want changed [station:WAT]", m)

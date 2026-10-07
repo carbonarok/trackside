@@ -66,6 +66,11 @@ type Hub struct {
 	// browser is connected; Live Activity pushes start here. It must not
 	// block.
 	OnChange func(Changes)
+	// OnTopics, if set, receives the topics of each flush that reaches
+	// browsers, before they are told: cached responses for those topics
+	// must go first, or a browser refetching on the news would be served
+	// the old copy. It must not block.
+	OnTopics func([]string)
 
 	mu       sync.Mutex
 	services map[int64]struct{}
@@ -184,6 +189,9 @@ func (h *Hub) Flush(ctx context.Context) {
 				topics[t] = struct{}{}
 			}
 		}
+	}
+	if h.OnTopics != nil {
+		h.OnTopics(keys(topics))
 	}
 	for _, c := range clients {
 		if hit := c.matching(topics); len(hit) > 0 {

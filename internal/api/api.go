@@ -20,6 +20,8 @@ import (
 // Server holds the API's dependencies.
 type Server struct {
 	Store *timetable.Store
+	// Boards, if set, shares board responses between viewers.
+	Boards *BoardCache
 	// Now is the clock used for default time windows; tests override it.
 	Now func() time.Time
 	// History answers Delay Repay and punctuality questions; nil disables
@@ -301,31 +303,50 @@ func (s *Server) board(arrivals bool) http.HandlerFunc {
 				bq.Calling = append(bq.Calling, l.TIPLOC)
 			}
 		}
-		entries, err := s.Store.Board(r.Context(), bq)
+		// Shared between everyone watching this board; see BoardCache.
+		topics := []string{"station:" + locs[0].CRS}
+		for _, l := range locs {
+			topics = append(topics, "station:"+l.TIPLOC)
+		}
+		body, err := s.Boards.get(r.Context(), r.URL.Path+"?"+q.Encode(), topics, func(ctx context.Context) ([]byte, error) {
+			return s.boardJSON(ctx, bq, locs[0])
+		})
 		if err != nil {
-			serverError(w, err)
+			if r.Context().Err() == nil {
+				serverError(w, err)
+			}
 			return
 		}
-		msgs, err := s.stationMessages(r.Context(), locs[0].CRS)
-		if err != nil {
-			serverError(w, err)
-			return
-		}
-		out := Board{
-			Messages: msgs,
-			Location: toLocation(locs[0]),
-			From:     bq.From.In(ukrail.London),
-			To:       bq.To.In(ukrail.London),
-			Services: make([]BoardService, 0, len(entries)),
-		}
-		for _, e := range entries {
-			out.Services = append(out.Services, BoardService{
-				ServiceSummary: summary(e.Service),
-				Stop:           stop(e.Service, e.Index),
-			})
-		}
-		writeJSON(w, out)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(body)
 	}
+}
+
+// boardJSON builds a board response, encoded.
+func (s *Server) boardJSON(ctx context.Context, bq timetable.BoardQuery, at timetable.Location) ([]byte, error) {
+	entries, err := s.Store.Board(ctx, bq)
+	if err != nil {
+		return nil, err
+	}
+	msgs, err := s.stationMessages(ctx, at.CRS)
+	if err != nil {
+		return nil, err
+	}
+	out := Board{
+		Messages: msgs,
+		Location: toLocation(at),
+		From:     bq.From.In(ukrail.London),
+		To:       bq.To.In(ukrail.London),
+		Services: make([]BoardService, 0, len(entries)),
+	}
+	for _, e := range entries {
+		out.Services = append(out.Services, BoardService{
+			ServiceSummary: summary(e.Service),
+			Stop:           stop(e.Service, e.Index),
+		})
+	}
+	body, err := json.Marshal(out)
+	return append(body, '\n'), err
 }
 
 // ServiceDetail is a service with its full route.
