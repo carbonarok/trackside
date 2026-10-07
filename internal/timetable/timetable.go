@@ -605,10 +605,17 @@ func (st *Store) loadRaw(ctx context.Context, ids []int64) (map[int64]*Service, 
 // train UID, in departure order.
 func (st *Store) SearchServices(ctx context.Context, q string, runDate time.Time, limit int) ([]*Service, error) {
 	q = strings.ToUpper(strings.TrimSpace(q))
+	// Two halves rather than one OR across both tables, so each can use
+	// its index.
 	rows, err := st.Pool.Query(ctx, `
-		SELECT sv.id FROM services sv JOIN schedules s ON s.id = sv.schedule_id
-		WHERE sv.run_date = $1 AND (s.signalling_id = $2 OR sv.train_uid = $2)
-		ORDER BY s.first_time NULLS LAST, sv.train_uid
+		SELECT id FROM (
+			SELECT sv.id, s.first_time, sv.train_uid FROM services sv JOIN schedules s ON s.id = sv.schedule_id
+			WHERE sv.run_date = $1 AND s.signalling_id = $2
+			UNION
+			SELECT sv.id, s.first_time, sv.train_uid FROM services sv JOIN schedules s ON s.id = sv.schedule_id
+			WHERE sv.run_date = $1 AND sv.train_uid = $2
+		) m
+		ORDER BY first_time NULLS LAST, train_uid
 		LIMIT $3`, runDate, q, limit)
 	if err != nil {
 		return nil, err

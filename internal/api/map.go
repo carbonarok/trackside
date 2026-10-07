@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -69,10 +70,20 @@ type TrainMap struct {
 
 func (s *Server) mapTrains(w http.ResponseWriter, r *http.Request) {
 	all := r.URL.Query().Get("all") == "true"
-	positions, err := s.Store.Positions(r.Context())
+	// Trains move continuously, so the map isn't dropped on every change;
+	// viewers share one for a few seconds and refetch at most every ten.
+	s.Cache.serve(w, r, cacheSpec{TTL: 5 * time.Second, Header: http.Header{
+		"Cache-Control": {"public, max-age=15"},
+		"Content-Type":  {"application/geo+json"},
+	}}, func(ctx context.Context) (any, error) {
+		return s.trainMap(ctx, all)
+	})
+}
+
+func (s *Server) trainMap(ctx context.Context, all bool) (*TrainMap, error) {
+	positions, err := s.Store.Positions(ctx)
 	if err != nil {
-		serverError(w, err)
-		return
+		return nil, err
 	}
 	out := TrainMap{Type: "FeatureCollection", GeneratedAt: s.now().In(ukrail.London), Features: []TrainFeature{}}
 	for _, p := range positions {
@@ -110,9 +121,7 @@ func (s *Server) mapTrains(w http.ResponseWriter, r *http.Request) {
 		}
 		out.Features = append(out.Features, TrainFeature{Type: "Feature", Geometry: point(p.Lat, p.Lon), Properties: props})
 	}
-	w.Header().Set("Cache-Control", "public, max-age=15")
-	w.Header().Set("Content-Type", "application/geo+json")
-	writeJSON(w, out)
+	return &out, nil
 }
 
 // StationFeature is a GeoJSON feature for one station.
@@ -129,17 +138,24 @@ type StationMap struct {
 }
 
 func (s *Server) mapStations(w http.ResponseWriter, r *http.Request) {
-	stations, err := s.Store.Stations(r.Context())
+	// Stations change weekly at most.
+	s.Cache.serve(w, r, cacheSpec{TTL: 10 * time.Minute, Header: http.Header{
+		"Cache-Control": {"public, max-age=3600"},
+		"Content-Type":  {"application/geo+json"},
+	}}, func(ctx context.Context) (any, error) {
+		return s.stationMap(ctx)
+	})
+}
+
+func (s *Server) stationMap(ctx context.Context) (*StationMap, error) {
+	stations, err := s.Store.Stations(ctx)
 	if err != nil {
-		serverError(w, err)
-		return
+		return nil, err
 	}
 	out := StationMap{Type: "FeatureCollection", Features: make([]StationFeature, 0, len(stations))}
 	for _, l := range stations {
 		out.Features = append(out.Features, StationFeature{Type: "Feature",
 			Geometry: point(*l.Lat, *l.Lon), Properties: toLocation(l)})
 	}
-	w.Header().Set("Cache-Control", "public, max-age=3600")
-	w.Header().Set("Content-Type", "application/geo+json")
-	writeJSON(w, out)
+	return &out, nil
 }

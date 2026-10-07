@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/klauspost/compress/gzhttp"
 
 	"github.com/carbonarok/trackside/internal/activity"
 	"github.com/carbonarok/trackside/internal/api"
@@ -424,17 +425,17 @@ func serve(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config) error {
 		activities.Enabled = true
 		slog.Info("live activity pushes on", "apns", apnsHost)
 	}
-	// Boards are shared between viewers for a few seconds, and dropped the
-	// moment the hub reports a change at their station.
-	boards := api.NewBoardCache(3 * time.Second)
-	hub.OnTopics = boards.Invalidate
+	// Boards, trains and the map are shared between viewers, and dropped
+	// the moment the hub reports a change to them.
+	cache := api.NewCache()
+	hub.OnTopics = cache.Invalidate
 	go hub.Run(ctx)
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /v1/live", hub)
 	activities.Register(mux)
 	hist := &history.Querier{Pool: pool, Store: store}
-	(&api.Server{Store: store, Boards: boards, History: hist}).Register(mux)
+	(&api.Server{Store: store, Cache: cache, History: hist}).Register(mux)
 	(&compat.Server{Store: store}).Register(mux)
 	api.RegisterDocs(mux)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -562,7 +563,7 @@ func serve(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config) error {
 
 	srv := &http.Server{
 		Addr:              env("LISTEN_ADDR", ":8080"),
-		Handler:           logRequests(mux),
+		Handler:           logRequests(compress(mux)),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	go func() {
@@ -666,6 +667,21 @@ func every(ctx context.Context, interval time.Duration, name string, fn func(con
 		case <-t.C:
 		}
 	}
+}
+
+// compress gzips responses that aren't already (the shared cache
+// compresses its own once). Everything leaves through the home connection
+// the Cloudflare tunnel runs over, so this decides how many people it can
+// serve. The live socket is left alone.
+func compress(h http.Handler) http.Handler {
+	gz := gzhttp.GzipHandler(h)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/live" {
+			h.ServeHTTP(w, r)
+			return
+		}
+		gz.ServeHTTP(w, r)
+	})
 }
 
 func logRequests(h http.Handler) http.Handler {

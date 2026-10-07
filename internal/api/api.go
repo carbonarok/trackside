@@ -20,8 +20,8 @@ import (
 // Server holds the API's dependencies.
 type Server struct {
 	Store *timetable.Store
-	// Boards, if set, shares board responses between viewers.
-	Boards *BoardCache
+	// Cache, if set, shares responses between viewers.
+	Cache *Cache
 	// Now is the clock used for default time windows; tests override it.
 	Now func() time.Time
 	// History answers Delay Repay and punctuality questions; nil disables
@@ -303,27 +303,19 @@ func (s *Server) board(arrivals bool) http.HandlerFunc {
 				bq.Calling = append(bq.Calling, l.TIPLOC)
 			}
 		}
-		// Shared between everyone watching this board; see BoardCache.
+		// Shared between everyone watching this board; see Cache.
 		topics := []string{"station:" + locs[0].CRS}
 		for _, l := range locs {
 			topics = append(topics, "station:"+l.TIPLOC)
 		}
-		body, err := s.Boards.get(r.Context(), r.URL.Path+"?"+q.Encode(), topics, func(ctx context.Context) ([]byte, error) {
-			return s.boardJSON(ctx, bq, locs[0])
+		s.Cache.serve(w, r, cacheSpec{TTL: 3 * time.Second, Topics: topics}, func(ctx context.Context) (any, error) {
+			return s.boardResponse(ctx, bq, locs[0])
 		})
-		if err != nil {
-			if r.Context().Err() == nil {
-				serverError(w, err)
-			}
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(body)
 	}
 }
 
-// boardJSON builds a board response, encoded.
-func (s *Server) boardJSON(ctx context.Context, bq timetable.BoardQuery, at timetable.Location) ([]byte, error) {
+// boardResponse builds a board.
+func (s *Server) boardResponse(ctx context.Context, bq timetable.BoardQuery, at timetable.Location) (*Board, error) {
 	entries, err := s.Store.Board(ctx, bq)
 	if err != nil {
 		return nil, err
@@ -345,8 +337,7 @@ func (s *Server) boardJSON(ctx context.Context, bq timetable.BoardQuery, at time
 			Stop:           stop(e.Service, e.Index),
 		})
 	}
-	body, err := json.Marshal(out)
-	return append(body, '\n'), err
+	return &out, nil
 }
 
 // ServiceDetail is a service with its full route.
@@ -375,19 +366,25 @@ func (s *Server) service(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "date must be YYYY-MM-DD")
 		return
 	}
-	svc, err := s.Store.Service(r.Context(), r.PathValue("uid"), date)
+	uid := r.PathValue("uid")
+	// Shared between everyone watching this train, until it next changes.
+	topic := "train:" + strings.ToUpper(uid) + "|" + date.Format(time.DateOnly)
+	s.Cache.serve(w, r, cacheSpec{TTL: 10 * time.Second, Topics: []string{topic}}, func(ctx context.Context) (any, error) {
+		return s.serviceDetail(ctx, uid, date)
+	})
+}
+
+func (s *Server) serviceDetail(ctx context.Context, uid string, date time.Time) (*ServiceDetail, error) {
+	svc, err := s.Store.Service(ctx, uid, date)
 	if errors.Is(err, timetable.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "service not found")
-		return
+		return nil, &statusError{http.StatusNotFound, "service not found"}
 	}
 	if err != nil {
-		serverError(w, err)
-		return
+		return nil, err
 	}
-	assocs, err := s.Store.Associations(r.Context(), svc)
+	assocs, err := s.Store.Associations(ctx, svc)
 	if err != nil {
-		serverError(w, err)
-		return
+		return nil, err
 	}
 	d := detail(svc)
 	for _, a := range assocs {
@@ -406,7 +403,7 @@ func (s *Server) service(w http.ResponseWriter, r *http.Request) {
 		}
 		d.Associations = append(d.Associations, out)
 	}
-	writeJSON(w, d)
+	return &d, nil
 }
 
 // Association is a join, divide or next working, from this service's point
