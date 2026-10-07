@@ -133,8 +133,9 @@ func TestSpecCoversRoutes(t *testing.T) {
 		}
 	}
 	for path := range s.Paths {
-		// Served outside the API server: the health check and the live hub.
-		if path == "/healthz" || path == "/v1/live" {
+		// Served outside the API server: the health check, the live hub and
+		// Live Activity registration.
+		if path == "/healthz" || path == "/v1/live" || strings.HasPrefix(path, "/v1/activities/") {
 			continue
 		}
 		req, _ := http.NewRequest(http.MethodGet, strings.NewReplacer("{code}", "CLJ", "{uid}", "W1", "{date}", "2026-01-01").Replace(path), nil)

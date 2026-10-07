@@ -400,6 +400,10 @@ type Association struct {
 	Service   *ServiceSummary `json:"service"`
 }
 
+// Detail is a service as GET /v1/services/{uid}/{date} returns it, without
+// associations.
+func Detail(svc *timetable.Service) ServiceDetail { return detail(svc) }
+
 func detail(svc *timetable.Service) ServiceDetail {
 	source := "timetable"
 	if svc.Source == "V" {

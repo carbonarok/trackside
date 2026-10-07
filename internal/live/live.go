@@ -62,6 +62,10 @@ type Hub struct {
 	// Fallback is how often, in seconds, clients should still poll while
 	// connected, to catch what pushes can't (on-demand Darwin Lite boards).
 	Fallback int
+	// OnChange, if set, receives every flush's changes whether or not any
+	// browser is connected; Live Activity pushes start here. It must not
+	// block.
+	OnChange func(Changes)
 
 	mu       sync.Mutex
 	services map[int64]struct{}
@@ -162,6 +166,9 @@ func (h *Hub) Flush(ctx context.Context) {
 	h.services, h.uids, h.rids, h.direct = map[int64]struct{}{}, map[string]struct{}{}, map[string]struct{}{}, map[string]struct{}{}
 	h.mu.Unlock()
 
+	if !ch.empty() && h.OnChange != nil {
+		h.OnChange(ch)
+	}
 	if len(clients) == 0 || (ch.empty() && len(topics) == 0) {
 		return
 	}

@@ -289,6 +289,52 @@ paths:
         "403":
           description: The request came from another site's page.
 
+  /v1/activities/register:
+    post:
+      summary: Register an iOS Live Activity for pushes
+      operationId: registerActivity
+      description: |
+        Starts APNs pushes to a Live Activity following one leg of a journey.
+        Registering the same `activity_id` again replaces its token. Answers
+        503 when the server has no APNs key.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [push_token, activity_id, service_uid, run_date, origin_crs, destination_crs, bundle_id]
+              properties:
+                push_token: { type: string, description: The ActivityKit push token, hex-encoded. }
+                activity_id: { type: string, maxLength: 128 }
+                service_uid: { type: string, examples: [W12345] }
+                run_date: { type: string, format: date }
+                origin_crs: { type: string, pattern: "^[A-Z]{3}$" }
+                destination_crs: { type: string, pattern: "^[A-Z]{3}$" }
+                bundle_id: { type: string, examples: [com.example.TrackSideIOS] }
+                connection_minutes: { type: integer, minimum: 0, description: Minutes to make this train from the previous leg. }
+                phase: { type: string, enum: [upcoming, boarding, onTrain, arrived], description: The phase the app is showing. }
+      responses:
+        "201": { description: Registered. }
+        "200": { description: Registration updated. }
+        "400": { description: The body is not a valid registration. }
+        "403": { description: The bundle ID is not one this server pushes to. }
+        "404": { description: No such service on that date. }
+        "422": { description: The service doesn't call at the origin and then the destination. }
+        "503": { description: Pushes are not configured on this server. }
+
+  /v1/activities/{activity_id}:
+    delete:
+      summary: Stop pushes to a Live Activity
+      operationId: deregisterActivity
+      parameters:
+        - name: activity_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Removed, or was not registered. }
+
   /healthz:
     get:
       summary: Liveness check

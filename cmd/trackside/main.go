@@ -20,7 +20,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/carbonarok/trackside/internal/activity"
 	"github.com/carbonarok/trackside/internal/api"
+	"github.com/carbonarok/trackside/internal/apns"
 	"github.com/carbonarok/trackside/internal/compat"
 	"github.com/carbonarok/trackside/internal/corpus"
 	"github.com/carbonarok/trackside/internal/darwin"
@@ -401,10 +403,25 @@ func serve(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config) error {
 	if store.Live != nil {
 		hub.Fallback = 30
 	}
+
+	// iOS Live Activities are pushed through APNs when a key is configured.
+	activities := &activity.Server{Pool: pool, Store: store, Bundles: bundleIDs(os.Getenv("APNS_BUNDLE_IDS"))}
+	apnsClient, apnsHost, err := apnsFromEnv()
+	if err != nil {
+		return err
+	}
+	if apnsClient != nil {
+		pusher := activity.NewPusher(pool, store, apnsClient, apnsHost)
+		hub.OnChange = pusher.Notify
+		go pusher.Run(ctx)
+		activities.Enabled = true
+		slog.Info("live activity pushes on", "apns", apnsHost)
+	}
 	go hub.Run(ctx)
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /v1/live", hub)
+	activities.Register(mux)
 	hist := &history.Querier{Pool: pool, Store: store}
 	(&api.Server{Store: store, History: hist}).Register(mux)
 	(&compat.Server{Store: store}).Register(mux)
@@ -535,6 +552,47 @@ func serve(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config) error {
 		return err
 	}
 	return nil
+}
+
+// apnsFromEnv builds the APNs client from APNS_KEY_FILE (the .p8 file) or
+// APNS_KEY (its contents; "\n" may stand for line breaks so it fits on one
+// line of .env), APNS_KEY_ID and APNS_TEAM_ID. APNS_ENV picks the environment
+// tried first: production (the default) or sandbox. No key, no client.
+func apnsFromEnv() (*apns.Client, string, error) {
+	keyPEM := os.Getenv("APNS_KEY")
+	if f := os.Getenv("APNS_KEY_FILE"); f != "" {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			return nil, "", fmt.Errorf("APNS_KEY_FILE: %w", err)
+		}
+		keyPEM = string(b)
+	}
+	if keyPEM == "" {
+		return nil, "", nil
+	}
+	c, err := apns.New([]byte(strings.ReplaceAll(keyPEM, `\n`, "\n")), os.Getenv("APNS_KEY_ID"), os.Getenv("APNS_TEAM_ID"))
+	if err != nil {
+		return nil, "", fmt.Errorf("APNs: %w (set APNS_KEY_ID and APNS_TEAM_ID with the key)", err)
+	}
+	switch env := os.Getenv("APNS_ENV"); env {
+	case "", "production":
+		return c, apns.Production, nil
+	case "sandbox", "development":
+		return c, apns.Sandbox, nil
+	default:
+		return nil, "", fmt.Errorf("APNS_ENV must be production or sandbox, not %q", env)
+	}
+}
+
+// bundleIDs parses a comma-separated allowlist; empty allows any.
+func bundleIDs(s string) map[string]bool {
+	out := map[string]bool{}
+	for _, b := range strings.Split(s, ",") {
+		if b = strings.TrimSpace(b); b != "" {
+			out[b] = true
+		}
+	}
+	return out
 }
 
 // dailyUpdate applies the latest SCHEDULE update once it has been published.

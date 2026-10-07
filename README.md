@@ -336,6 +336,10 @@ precedence over it.
 | `NRE_LDBWS_URL` | `https://lite.realtime.nationalrail.co.uk/OpenLDBWS/ldb12.asmx` | Darwin Lite endpoint |
 | `HISTORY_DAYS` | `400` | How many days of actual running to keep. `0` keeps it forever. |
 | `MAP_TILE_URL` | OpenStreetMap | Map tiles for the live map, as `https://.../{z}/{x}/{y}.png`. OpenStreetMap's own servers are fine for personal use; a public instance should use its own tiles or a tile provider. |
+| `APNS_KEY_FILE` or `APNS_KEY` | | The APNs auth key (.p8) from the Apple Developer portal, as a file path or its contents (`\n` may stand for line breaks). Turns on [Live Activity pushes](#ios-live-activities). |
+| `APNS_KEY_ID`, `APNS_TEAM_ID` | | The key's ID and your Apple team ID |
+| `APNS_ENV` | `production` | APNs environment tried first, `production` or `sandbox`. A token from the other one is retried there and remembered, so Xcode and TestFlight builds both work. |
+| `APNS_BUNDLE_IDS` | (any) | Comma-separated bundle IDs allowed to register |
 | `MAP_TILE_ATTRIBUTION` | | Attribution shown with `MAP_TILE_URL`'s tiles (HTML) |
 | `LISTEN_ADDR` | `:8080` | |
 | `LOG_LEVEL` | `info` | `debug` logs every request |
@@ -373,6 +377,7 @@ TIPLOC (`CLPHMJN`). A CRS code covers every TIPLOC at that station.
 | `GET /v1/delay-repay?from=BTN&to=VIC&date=…&departure=08:15` | How late a journey arrived, and its Delay Repay band |
 | `GET /v1/map/trains`, `GET /v1/map/stations` | Train positions and stations as GeoJSON |
 | `GET /v1/live` | WebSocket: hear when boards, trains and the map change (see below) |
+| `POST /v1/activities/register`, `DELETE /v1/activities/{id}` | iOS Live Activity push registration (see below) |
 | `GET /healthz` | Liveness |
 | `GET /openapi.yaml`, `GET /docs` | API reference |
 
@@ -422,6 +427,37 @@ the route. Messages say what changed, not how: refetch with the REST
 endpoints. The first message is `{"type":"hello","fallback":120}`, the number
 of seconds to keep polling at anyway. It is 30 with Darwin Lite, whose boards
 are fetched on demand and never pushed.
+
+### iOS Live Activities
+
+With an APNs key configured, trackside keeps the TrackSide iOS app's Live
+Activities current while the app is in the background. The app registers
+each activity's push token for one leg of a journey:
+
+```http
+POST /v1/activities/register
+{"push_token": "<hex>", "activity_id": "<id>", "service_uid": "W12345", "run_date": "2026-10-07",
+ "origin_crs": "WOK", "destination_crs": "RDG", "bundle_id": "com.example.TrackSideIOS",
+ "connection_minutes": 7, "phase": "boarding"}
+```
+
+`connection_minutes` and `phase` are optional: the minutes to make this train
+from the previous leg, and the phase the app is showing. Registering again
+with the same `activity_id` replaces the token. `DELETE
+/v1/activities/{activity_id}` stops pushes.
+
+Whenever the train changes, the leg's `content-state` is rebuilt from the
+same data as `/v1/services/{uid}/{date}` and pushed with `apns-push-type:
+liveactivity`, but only if something the activity shows has changed. Dates
+in it (`departureDate`, `arrivalDate`, `lastUpdated`) are seconds since 1
+January 2001, which is how Swift decodes a `Date` by default. An alert,
+sent at priority 10, accompanies a platform change, a cancellation, or a
+delay that grows by 3 minutes or more to at least 5. Other updates go at
+priority 5.
+
+Arrival at the destination sends an `end` event and removes the
+registration, as does an APNs `410`. Registrations with nothing sent for six
+hours are removed too.
 
 ### Realtime Trains–compatible endpoints
 
