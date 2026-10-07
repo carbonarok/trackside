@@ -442,7 +442,11 @@ POST /v1/activities/register
 ```
 
 `connection_minutes` and `phase` are optional: the minutes to make this train
-from the previous leg, and the phase the app is showing. Registering again
+from the previous leg, and the phase the app is showing. Better than a fixed
+`connection_minutes` is the previous leg's train: with `previous_service_uid`
+(and `previous_run_date` and `previous_arrival_crs` when they differ from this
+leg's date and origin), the connection is worked out from both trains' live
+times and pushed again whenever either train changes. Registering again
 with the same `activity_id` replaces the token. `DELETE
 /v1/activities/{activity_id}` stops pushes.
 

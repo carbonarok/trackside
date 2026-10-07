@@ -215,3 +215,34 @@ func TestAlerts(t *testing.T) {
 }
 
 func ptr(s ContentState) *ContentState { return &s }
+
+func TestConnection(t *testing.T) {
+	// An earlier train into Woking at 11:50 makes an 8-minute connection
+	// onto the 11:58 to Reading.
+	prev := api.ServiceDetail{Stops: []api.Stop{
+		{Location: api.Location{CRS: "WAT"}, Kind: "origin", Departure: &api.Times{Public: at("11:15")}},
+		{Location: api.Location{CRS: "WOK"}, Kind: "destination", Arrival: &api.Times{Public: at("11:50")}},
+	}}
+	if c := Connection(prev, "WOK", service(), "WOK"); c == nil || *c != 8 {
+		t.Fatalf("connection %v, want 8", c)
+	}
+	// The earlier train runs 5 late: 3 minutes left.
+	prev.Stops[1].Arrival.Estimated = at("11:55")
+	if c := Connection(prev, "WOK", service(), "WOK"); *c != 3 {
+		t.Errorf("late arrival: %d, want 3", *c)
+	}
+	// And the onward train 4 late: 7 again. Live times on both sides count.
+	d := service()
+	d.Stops[0].Departure.Estimated = at("12:02")
+	if c := Connection(prev, "WOK", d, "WOK"); *c != 7 {
+		t.Errorf("both late: %d, want 7", *c)
+	}
+	// Badly late: negative means the connection will be missed.
+	prev.Stops[1].Arrival.Estimated = at("12:10")
+	if c := Connection(prev, "WOK", d, "WOK"); *c != -8 {
+		t.Errorf("missed: %d, want -8", *c)
+	}
+	if Connection(prev, "GLD", service(), "WOK") != nil || Connection(prev, "WOK", service(), "PAD") != nil {
+		t.Error("found a connection at a station one of the trains doesn't call at")
+	}
+}

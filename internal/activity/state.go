@@ -100,15 +100,8 @@ type Leg struct {
 // the first call at the origin with a departure, and the last call after it
 // at the destination with an arrival.
 func Endpoints(d api.ServiceDetail, origin, destination string) (dep, arr *api.Stop, ok bool) {
-	from := -1
-	for i := range d.Stops {
-		s := &d.Stops[i]
-		if s.Departure != nil && s.Kind != "pass" && (s.CRS == origin || s.TIPLOC == origin) {
-			from = i
-			break
-		}
-	}
-	if from < 0 {
+	_, from, found := firstDeparture(d, origin)
+	if !found {
 		return nil, nil, false
 	}
 	for i := len(d.Stops) - 1; i > from; i-- {
@@ -118,6 +111,42 @@ func Endpoints(d api.ServiceDetail, origin, destination string) (dep, arr *api.S
 		}
 	}
 	return nil, nil, false
+}
+
+// Connection is the minutes between the previous train's arrival at
+// arrivalCRS and this train's departure from originCRS, each by its best
+// known time. Negative means the connection will be missed. It is nil when
+// either stop can't be found.
+func Connection(prev api.ServiceDetail, arrivalCRS string, d api.ServiceDetail, originCRS string) *int {
+	var in *time.Time
+	for i := len(prev.Stops) - 1; i >= 0; i-- {
+		s := &prev.Stops[i]
+		if s.Arrival != nil && s.Kind != "pass" && (s.CRS == arrivalCRS || s.TIPLOC == arrivalCRS) {
+			in = best(s.Arrival)
+			break
+		}
+	}
+	from, _, _ := firstDeparture(d, originCRS)
+	if in == nil || from == nil {
+		return nil
+	}
+	out := best(from.Departure)
+	if out == nil {
+		return nil
+	}
+	m := int(out.Sub(*in).Round(time.Minute).Minutes())
+	return &m
+}
+
+// firstDeparture finds the first call at code with a departure.
+func firstDeparture(d api.ServiceDetail, code string) (*api.Stop, int, bool) {
+	for i := range d.Stops {
+		s := &d.Stops[i]
+		if s.Departure != nil && s.Kind != "pass" && (s.CRS == code || s.TIPLOC == code) {
+			return s, i, true
+		}
+	}
+	return nil, -1, false
 }
 
 // State builds the leg's content-state at now.

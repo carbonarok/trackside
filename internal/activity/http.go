@@ -53,6 +53,20 @@ type Registration struct {
 	ConnectionMinutes *int `json:"connection_minutes,omitempty"`
 	// Optional: the phase the app is showing, so pushes don't move it back.
 	Phase string `json:"phase,omitempty"`
+	// Optional: the train of the journey's previous leg. With it the
+	// connection is worked out from both trains' live times, and a change to
+	// either train updates this activity. The date defaults to run_date and
+	// the station to origin_crs (set it for a change of station).
+	PreviousServiceUID string `json:"previous_service_uid,omitempty"`
+	PreviousRunDate    string `json:"previous_run_date,omitempty"`
+	PreviousArrivalCRS string `json:"previous_arrival_crs,omitempty"`
+}
+
+// previous is a registration's previous leg, once normalised.
+type previous struct {
+	UID        string
+	RunDate    time.Time
+	ArrivalCRS string
 }
 
 var (
@@ -64,7 +78,7 @@ var (
 )
 
 // normalise tidies a registration and reports the first thing wrong with it.
-func (r *Registration) normalise() (time.Time, error) {
+func (r *Registration) normalise() (time.Time, *previous, error) {
 	r.PushToken = strings.ToLower(strings.TrimSpace(r.PushToken))
 	r.ServiceUID = strings.ToUpper(strings.TrimSpace(r.ServiceUID))
 	r.OriginCRS = strings.ToUpper(strings.TrimSpace(r.OriginCRS))
@@ -72,25 +86,47 @@ func (r *Registration) normalise() (time.Time, error) {
 	r.BundleID = strings.TrimSpace(r.BundleID)
 	switch {
 	case !hexToken.MatchString(r.PushToken) || len(r.PushToken)%2 != 0:
-		return time.Time{}, errors.New("push_token must be the hex-encoded ActivityKit push token")
+		return time.Time{}, nil, errors.New("push_token must be the hex-encoded ActivityKit push token")
 	case !activityID.MatchString(r.ActivityID):
-		return time.Time{}, errors.New("activity_id must be 1 to 128 letters, digits, '.', '_', ':' or '-'")
+		return time.Time{}, nil, errors.New("activity_id must be 1 to 128 letters, digits, '.', '_', ':' or '-'")
 	case !serviceUID.MatchString(r.ServiceUID):
-		return time.Time{}, errors.New("service_uid must be a train UID such as W12345")
+		return time.Time{}, nil, errors.New("service_uid must be a train UID such as W12345")
 	case !crs.MatchString(r.OriginCRS) || !crs.MatchString(r.DestinationCRS):
-		return time.Time{}, errors.New("origin_crs and destination_crs must be three-letter station codes")
+		return time.Time{}, nil, errors.New("origin_crs and destination_crs must be three-letter station codes")
 	case len(r.BundleID) > 155 || !bundleID.MatchString(r.BundleID):
-		return time.Time{}, errors.New("bundle_id must be the app's bundle identifier")
+		return time.Time{}, nil, errors.New("bundle_id must be the app's bundle identifier")
 	case r.ConnectionMinutes != nil && (*r.ConnectionMinutes < 0 || *r.ConnectionMinutes > 1440):
-		return time.Time{}, errors.New("connection_minutes must be between 0 and 1440")
+		return time.Time{}, nil, errors.New("connection_minutes must be between 0 and 1440")
 	case r.Phase != "" && phaseRank[r.Phase] == 0 && r.Phase != PhaseUpcoming:
-		return time.Time{}, errors.New("phase must be upcoming, boarding, onTrain or arrived")
+		return time.Time{}, nil, errors.New("phase must be upcoming, boarding, onTrain or arrived")
 	}
 	date, err := time.Parse(time.DateOnly, r.RunDate)
 	if err != nil {
-		return time.Time{}, errors.New("run_date must be YYYY-MM-DD")
+		return time.Time{}, nil, errors.New("run_date must be YYYY-MM-DD")
 	}
-	return date, nil
+	r.PreviousServiceUID = strings.ToUpper(strings.TrimSpace(r.PreviousServiceUID))
+	if r.PreviousServiceUID == "" {
+		if r.PreviousRunDate != "" || r.PreviousArrivalCRS != "" {
+			return time.Time{}, nil, errors.New("previous_run_date and previous_arrival_crs need previous_service_uid")
+		}
+		return date, nil, nil
+	}
+	prev := &previous{UID: r.PreviousServiceUID, RunDate: date, ArrivalCRS: r.OriginCRS}
+	if !serviceUID.MatchString(prev.UID) {
+		return time.Time{}, nil, errors.New("previous_service_uid must be a train UID such as W12345")
+	}
+	if r.PreviousRunDate != "" {
+		if prev.RunDate, err = time.Parse(time.DateOnly, r.PreviousRunDate); err != nil {
+			return time.Time{}, nil, errors.New("previous_run_date must be YYYY-MM-DD")
+		}
+	}
+	if r.PreviousArrivalCRS != "" {
+		prev.ArrivalCRS = strings.ToUpper(strings.TrimSpace(r.PreviousArrivalCRS))
+		if !crs.MatchString(prev.ArrivalCRS) {
+			return time.Time{}, nil, errors.New("previous_arrival_crs must be a three-letter station code")
+		}
+	}
+	return date, prev, nil
 }
 
 func (s *Server) register(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +141,7 @@ func (s *Server) register(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "body must be a JSON registration")
 		return
 	}
-	date, err := reg.normalise()
+	date, prev, err := reg.normalise()
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -127,10 +163,33 @@ func (s *Server) register(w http.ResponseWriter, r *http.Request) {
 		serverError(w, err)
 		return
 	}
-	state, ok := State(api.Detail(svc), Leg{
+	detail := api.Detail(svc)
+	leg := Leg{
 		OriginCRS: reg.OriginCRS, DestinationCRS: reg.DestinationCRS,
 		ConnectionMinutes: reg.ConnectionMinutes, Phase: reg.Phase,
-	}, s.now())
+	}
+	var prevUID, prevCRS *string
+	var prevDate *time.Time
+	if prev != nil {
+		psvc, err := s.Store.Service(r.Context(), prev.UID, prev.RunDate)
+		if errors.Is(err, timetable.ErrNotFound) {
+			writeError(w, http.StatusUnprocessableEntity, "previous_service_uid is not a train on that date")
+			return
+		}
+		if err != nil {
+			serverError(w, err)
+			return
+		}
+		conn := Connection(api.Detail(psvc), prev.ArrivalCRS, detail, reg.OriginCRS)
+		if conn == nil {
+			writeError(w, http.StatusUnprocessableEntity,
+				"the previous train doesn't call at previous_arrival_crs (or origin_crs)")
+			return
+		}
+		leg.ConnectionMinutes = conn
+		prevUID, prevDate, prevCRS = &prev.UID, &prev.RunDate, &prev.ArrivalCRS
+	}
+	state, ok := State(detail, leg, s.now())
 	if !ok {
 		writeError(w, http.StatusUnprocessableEntity,
 			"origin_crs and destination_crs must be stations this service calls at, in that order")
@@ -143,20 +202,25 @@ func (s *Server) register(w http.ResponseWriter, r *http.Request) {
 	var inserted bool
 	err = s.Pool.QueryRow(r.Context(), `
 		INSERT INTO live_activities (activity_id, push_token, bundle_id, train_uid, run_date,
-			origin_crs, destination_crs, connection_minutes, last_state)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			origin_crs, destination_crs, connection_minutes, last_state,
+			previous_train_uid, previous_run_date, previous_arrival_crs)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		ON CONFLICT (activity_id) DO UPDATE SET
 			push_token = EXCLUDED.push_token, bundle_id = EXCLUDED.bundle_id,
 			train_uid = EXCLUDED.train_uid, run_date = EXCLUDED.run_date,
 			origin_crs = EXCLUDED.origin_crs, destination_crs = EXCLUDED.destination_crs,
 			connection_minutes = EXCLUDED.connection_minutes,
+			previous_train_uid = EXCLUDED.previous_train_uid,
+			previous_run_date = EXCLUDED.previous_run_date,
+			previous_arrival_crs = EXCLUDED.previous_arrival_crs,
 			apns_host = CASE WHEN live_activities.push_token = EXCLUDED.push_token
 			                 THEN live_activities.apns_host END,
 			last_state = COALESCE(live_activities.last_state, EXCLUDED.last_state),
 			updated_at = now()
 		RETURNING (xmax = 0)`,
 		reg.ActivityID, reg.PushToken, reg.BundleID, reg.ServiceUID, date,
-		reg.OriginCRS, reg.DestinationCRS, reg.ConnectionMinutes, initial).Scan(&inserted)
+		reg.OriginCRS, reg.DestinationCRS, reg.ConnectionMinutes, initial,
+		prevUID, prevDate, prevCRS).Scan(&inserted)
 	if err != nil {
 		serverError(w, err)
 		return

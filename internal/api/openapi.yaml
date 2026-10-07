@@ -314,13 +314,16 @@ paths:
                 bundle_id: { type: string, examples: [com.example.TrackSideIOS] }
                 connection_minutes: { type: integer, minimum: 0, description: Minutes to make this train from the previous leg. }
                 phase: { type: string, enum: [upcoming, boarding, onTrain, arrived], description: The phase the app is showing. }
+                previous_service_uid: { type: string, description: "The previous leg's train. The connection is then worked out from both trains' live times, and a change to either updates this activity." }
+                previous_run_date: { type: string, format: date, description: Defaults to run_date. }
+                previous_arrival_crs: { type: string, pattern: "^[A-Z]{3}$", description: Where the previous train is left. Defaults to origin_crs; set it for a change of station. }
       responses:
         "201": { description: Registered. }
         "200": { description: Registration updated. }
         "400": { description: The body is not a valid registration. }
         "403": { description: The bundle ID is not one this server pushes to. }
         "404": { description: No such service on that date. }
-        "422": { description: The service doesn't call at the origin and then the destination. }
+        "422": { description: "The service doesn't call at the origin and then the destination, or the previous train doesn't call at the connecting station." }
         "503": { description: Pushes are not configured on this server. }
 
   /v1/activities/{activity_id}:

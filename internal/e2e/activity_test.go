@@ -296,3 +296,78 @@ func TestLiveActivityPushes(t *testing.T) {
 		}
 	})
 }
+
+func TestLiveActivityConnections(t *testing.T) {
+	pool, _ := setup(t)
+	ctx := context.Background()
+	clock := time.Date(2026, 10, 6, 7, 50, 0, 0, ukrail.London)
+	now := func() time.Time { return clock }
+	store := &timetable.Store{Pool: pool, Now: now}
+	srv := &activity.Server{Pool: pool, Store: store, Enabled: true, Now: now}
+	mux := http.NewServeMux()
+	srv.Register(mux)
+	api := httptest.NewServer(mux)
+	defer api.Close()
+
+	// Leg 2 of a journey: W10004 from Clapham Junction (08:37) to Woking,
+	// after leg 1 on W10001 into Clapham Junction (08:06): 31 minutes.
+	body, _ := json.Marshal(map[string]any{
+		"push_token": strings.Repeat("e5", 32), "activity_id": "leg-2", "service_uid": "W10004",
+		"run_date": "2026-10-06", "origin_crs": "CLJ", "destination_crs": "WOK",
+		"bundle_id": "com.example.TrackSideIOS", "connection_minutes": 99,
+		"previous_service_uid": "W10001",
+	})
+	resp, err := http.Post(api.URL+"/v1/activities/register", "application/json", bytes.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("register: %d", resp.StatusCode)
+	}
+	var registered int
+	pool.QueryRow(ctx, `SELECT (last_state->>'connectionMinutes')::int FROM live_activities`).Scan(&registered)
+	if registered != 31 {
+		t.Errorf("connection at registration %d, want 31 from the timetable (not the app's 99)", registered)
+	}
+
+	// A previous leg that doesn't reach the connecting station is refused.
+	bad, _ := json.Marshal(map[string]any{
+		"push_token": strings.Repeat("e5", 32), "activity_id": "leg-x", "service_uid": "W10004",
+		"run_date": "2026-10-06", "origin_crs": "CLJ", "destination_crs": "WOK",
+		"bundle_id": "com.example.TrackSideIOS", "previous_service_uid": "W10001", "previous_arrival_crs": "PAD",
+	})
+	if resp, _ := http.Post(api.URL+"/v1/activities/register", "application/json", bytes.NewReader(bad)); resp.StatusCode != http.StatusUnprocessableEntity {
+		t.Errorf("previous leg not via the station: %d, want 422", resp.StatusCode)
+	}
+
+	// Leg 1's train reaches Clapham Junction 9 minutes late. Only W10001
+	// changed, but leg 2's activity is updated: 22 minutes now.
+	clock = time.Date(2026, 10, 6, 8, 16, 0, 0, ukrail.London)
+	applier := &trust.Applier{Pool: pool, Now: now}
+	frame := trustFrame(t,
+		map[string]any{"msg_type": "0001", "train_id": "721A01MX06", "train_uid": "W10001",
+			"tp_origin_timestamp":  "2026-10-06",
+			"origin_dep_timestamp": fmt.Sprint(time.Date(2026, 10, 6, 7, 0, 0, 0, time.UTC).UnixMilli())},
+		map[string]any{"msg_type": "0003", "train_id": "721A01MX06", "event_type": "ARRIVAL",
+			"loc_stanox": "87703", "actual_timestamp": localMillis(8, 15), "planned_timestamp": localMillis(8, 6),
+			"offroute_ind": "false"},
+	)
+	if err := applier.ApplyFrame(ctx, frame); err != nil {
+		t.Fatal(err)
+	}
+	fake := &fakeAPNs{}
+	pusher := activity.NewPusher(pool, store, fake, apns.Production)
+	pusher.Now = now
+	if err := pusher.Push(ctx, live.Changes{UIDs: []string{"W10001"}}); err != nil {
+		t.Fatal(err)
+	}
+	got := fake.take()
+	if len(got) != 1 {
+		t.Fatalf("%d notifications after leg 1 changed, want 1", len(got))
+	}
+	_, cs := decode(t, got[0])
+	if cs.ConnectionMinutes == nil || *cs.ConnectionMinutes != 22 {
+		t.Errorf("pushed connection %v, want 22", cs.ConnectionMinutes)
+	}
+}

@@ -106,20 +106,27 @@ type registration struct {
 	Host                   *string
 	Last                   *ContentState
 	LastTimestamp          int64
+	// The previous leg's train, if the app named it.
+	PrevUID     *string
+	PrevRunDate *time.Time
+	PrevCRS     *string
 }
 
-// Push sends updates to every activity on a changed service.
+// Push sends updates to every activity whose train, or previous leg's
+// train, changed.
 func (p *Pusher) Push(ctx context.Context, c live.Changes) error {
 	if len(c.Services)+len(c.UIDs)+len(c.RIDs) == 0 {
 		return nil
 	}
 	rows, err := p.Pool.Query(ctx, `
 		SELECT a.activity_id, a.push_token, a.bundle_id, a.train_uid, a.run_date, a.origin_crs,
-		       a.destination_crs, a.connection_minutes, a.apns_host, a.last_state, a.last_timestamp
+		       a.destination_crs, a.connection_minutes, a.apns_host, a.last_state, a.last_timestamp,
+		       a.previous_train_uid, a.previous_run_date, a.previous_arrival_crs
 		FROM live_activities a
-		WHERE a.train_uid = ANY($2)
+		WHERE a.train_uid = ANY($2) OR a.previous_train_uid = ANY($2)
 		   OR EXISTS (SELECT 1 FROM services sv
-		              WHERE sv.train_uid = a.train_uid AND sv.run_date = a.run_date
+		              WHERE ((sv.train_uid = a.train_uid AND sv.run_date = a.run_date)
+		                  OR (sv.train_uid = a.previous_train_uid AND sv.run_date = a.previous_run_date))
 		                AND (sv.id = ANY($1) OR sv.darwin_rid = ANY($3)))`,
 		c.Services, c.UIDs, c.RIDs)
 	if err != nil {
@@ -129,7 +136,7 @@ func (p *Pusher) Push(ctx context.Context, c live.Changes) error {
 		var g registration
 		var last []byte
 		err := r.Scan(&g.ID, &g.Token, &g.Bundle, &g.UID, &g.RunDate, &g.Origin, &g.Destination,
-			&g.ConnectionMinutes, &g.Host, &last, &g.LastTimestamp)
+			&g.ConnectionMinutes, &g.Host, &last, &g.LastTimestamp, &g.PrevUID, &g.PrevRunDate, &g.PrevCRS)
 		if err == nil && last != nil {
 			g.Last = &ContentState{}
 			if json.Unmarshal(last, g.Last) != nil {
@@ -148,26 +155,38 @@ func (p *Pusher) Push(ctx context.Context, c live.Changes) error {
 		date time.Time
 	}
 	details := map[key]*api.ServiceDetail{}
+	lookup := func(uid string, date time.Time) *api.ServiceDetail {
+		k := key{uid, date}
+		if d, seen := details[k]; seen {
+			return d
+		}
+		svc, err := p.Store.Service(ctx, uid, date)
+		if err != nil {
+			if !errors.Is(err, timetable.ErrNotFound) {
+				slog.Warn("live activities: service lookup failed", "uid", uid, "err", err)
+			}
+			details[k] = nil
+			return nil
+		}
+		d := api.Detail(svc)
+		details[k] = &d
+		return &d
+	}
 	sem := make(chan struct{}, sendConcurrency)
 	var wg sync.WaitGroup
 	for _, g := range regs {
-		k := key{g.UID, g.RunDate}
-		d, seen := details[k]
-		if !seen {
-			svc, err := p.Store.Service(ctx, g.UID, g.RunDate)
-			if err != nil {
-				if !errors.Is(err, timetable.ErrNotFound) {
-					slog.Warn("live activities: service lookup failed", "uid", g.UID, "err", err)
-				}
-				details[k] = nil
-				continue
-			}
-			detail := api.Detail(svc)
-			d = &detail
-			details[k] = d
-		}
+		d := lookup(g.UID, g.RunDate)
 		if d == nil {
 			continue
+		}
+		// With the previous leg's train known, the connection follows both
+		// trains' live times; otherwise it stays as the app registered it.
+		if g.PrevUID != nil && g.PrevRunDate != nil && g.PrevCRS != nil {
+			if prev := lookup(*g.PrevUID, *g.PrevRunDate); prev != nil {
+				if conn := Connection(*prev, *g.PrevCRS, *d, g.Origin); conn != nil {
+					g.ConnectionMinutes = conn
+				}
+			}
 		}
 		sem <- struct{}{}
 		wg.Add(1)
