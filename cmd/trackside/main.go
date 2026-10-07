@@ -490,20 +490,33 @@ func serve(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config) error {
 	}
 
 	// Station coordinates are public (NaPTAN), so keep them current without
-	// any configuration: weekly, and straight away if there are none.
+	// any configuration: weekly, and straight away if there are none. On a
+	// new database the stations they attach to arrive with CORPUS from the
+	// inbox, so until some stick, try again every 10 minutes.
 	go func() {
-		var n int
-		pool.QueryRow(ctx, `SELECT count(*) FROM locations WHERE lat IS NOT NULL`).Scan(&n)
-		if n > 0 {
+		withCoordinates := func() int {
+			var n int
+			pool.QueryRow(ctx, `SELECT count(*) FROM locations WHERE lat IS NOT NULL`).Scan(&n)
+			return n
+		}
+		wait := time.Duration(0)
+		if withCoordinates() > 0 {
+			wait = 7 * 24 * time.Hour
+		}
+		for {
 			select {
 			case <-ctx.Done():
 				return
-			case <-time.After(7 * 24 * time.Hour):
+			case <-time.After(wait):
+			}
+			if err := importNaPTAN(ctx, pool, nil); err != nil && ctx.Err() == nil {
+				slog.Warn("station coordinates failed", "err", err)
+			}
+			wait = 7 * 24 * time.Hour
+			if withCoordinates() == 0 {
+				wait = 10 * time.Minute
 			}
 		}
-		every(ctx, 7*24*time.Hour, "station coordinates", func(ctx context.Context) error {
-			return importNaPTAN(ctx, pool, nil)
-		})
 	}()
 
 	importers, err := inboxImporters(pool)

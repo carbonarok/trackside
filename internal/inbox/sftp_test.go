@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
@@ -21,6 +22,14 @@ import (
 // "rdm" with password "secret". It returns the address and the host key
 // as an authorized_keys line.
 func sftpServer(t *testing.T) (string, string) {
+	return sftpServerWith(t, func(ch ssh.Channel) {
+		if srv, err := sftp.NewServer(ch); err == nil {
+			srv.Serve()
+		}
+	})
+}
+
+func sftpServerWith(t *testing.T, serve func(ssh.Channel)) (string, string) {
 	t.Helper()
 	_, priv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
@@ -50,13 +59,13 @@ func sftpServer(t *testing.T) (string, string) {
 			if err != nil {
 				return
 			}
-			go serveSFTP(nc, config)
+			go serveSFTP(nc, config, serve)
 		}
 	}()
 	return l.Addr().String(), string(ssh.MarshalAuthorizedKey(signer.PublicKey()))
 }
 
-func serveSFTP(nc net.Conn, config *ssh.ServerConfig) {
+func serveSFTP(nc net.Conn, config *ssh.ServerConfig, serve func(ssh.Channel)) {
 	conn, chans, reqs, err := ssh.NewServerConn(nc, config)
 	if err != nil {
 		nc.Close()
@@ -74,9 +83,7 @@ func serveSFTP(nc net.Conn, config *ssh.ServerConfig) {
 				ok := r.Type == "subsystem" && string(r.Payload[4:]) == "sftp"
 				r.Reply(ok, nil)
 				if ok {
-					if srv, err := sftp.NewServer(ch); err == nil {
-						srv.Serve()
-					}
+					serve(ch)
 					ch.Close()
 				}
 			}
@@ -200,4 +207,71 @@ func TestSFTP(t *testing.T) {
 			t.Error(err)
 		}
 	})
+}
+
+// stallFS serves one file, "big", that stops sending after 64 KiB.
+type stallFS struct{ release chan struct{} }
+
+func (s stallFS) Fileread(*sftp.Request) (io.ReaderAt, error) { return s, nil }
+
+func (s stallFS) ReadAt(b []byte, off int64) (int, error) {
+	if off >= 64<<10 {
+		<-s.release
+		return 0, io.EOF
+	}
+	for i := range b {
+		b[i] = 'x'
+	}
+	return len(b), nil
+}
+
+func (s stallFS) Filelist(r *sftp.Request) (sftp.ListerAt, error) {
+	return listerAt{fileInfo{}}, nil
+}
+
+type listerAt []os.FileInfo
+
+func (l listerAt) ListAt(f []os.FileInfo, off int64) (int, error) {
+	if off >= int64(len(l)) {
+		return 0, io.EOF
+	}
+	return copy(f, l[off:]), io.EOF
+}
+
+type fileInfo struct{ os.FileInfo }
+
+func (fileInfo) Name() string       { return "big" }
+func (fileInfo) Size() int64        { return 10 << 20 }
+func (fileInfo) Mode() os.FileMode  { return 0o644 }
+func (fileInfo) ModTime() time.Time { return time.Now() }
+func (fileInfo) IsDir() bool        { return false }
+func (fileInfo) Sys() any           { return nil }
+
+// A download that stops arriving fails rather than hanging the import.
+func TestSFTPStall(t *testing.T) {
+	release := make(chan struct{})
+	defer close(release)
+	fs := stallFS{release}
+	addr, hostKey := sftpServerWith(t, func(ch ssh.Channel) {
+		sftp.NewRequestServer(ch, sftp.Handlers{FileGet: fs, FileList: fs}).Serve()
+	})
+	s, err := NewSFTP("sftp://rdm@"+addr+"/", "secret", "", hostKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	s.StallTimeout = 300 * time.Millisecond
+	start := time.Now()
+	r, err := s.Open(context.Background(), "big")
+	if err == nil {
+		r.Close()
+		t.Fatal("stalled download succeeded")
+	}
+	if !strings.Contains(err.Error(), "no data") {
+		t.Errorf("err = %v", err)
+	}
+	if d := time.Since(start); d > 15*time.Second {
+		t.Errorf("took %s to give up", d)
+	}
+	t.Log(err)
 }
