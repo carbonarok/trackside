@@ -268,7 +268,7 @@ func importNaPTAN(ctx context.Context, pool *pgxpool.Pool, args []string) error 
 	return nil
 }
 
-// inboxImporters builds importers for INBOX_DIR and INBOX_BUCKET.
+// inboxImporters builds importers for INBOX_DIR, INBOX_BUCKET and INBOX_SFTP.
 func inboxImporters(pool *pgxpool.Pool) ([]*inbox.Importer, error) {
 	var out []*inbox.Importer
 	if dir := os.Getenv("INBOX_DIR"); dir != "" {
@@ -280,6 +280,13 @@ func inboxImporters(pool *pgxpool.Pool) ([]*inbox.Importer, error) {
 			return nil, err
 		}
 		out = append(out, &inbox.Importer{Pool: pool, Source: b})
+	}
+	if u := os.Getenv("INBOX_SFTP"); u != "" {
+		s, err := inbox.NewSFTP(u, os.Getenv("INBOX_SFTP_PASSWORD"), os.Getenv("INBOX_SFTP_KEY"), os.Getenv("INBOX_SFTP_HOST_KEY"))
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, &inbox.Importer{Pool: pool, Source: s})
 	}
 	return out, nil
 }

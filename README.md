@@ -246,9 +246,19 @@ Google Cloud project.
    INBOX_SECRET_KEY=...
    ```
 
-For SFTP delivery, or files you download by hand, point `INBOX_DIR` at the
-folder instead. A dedicated folder is best, but a busy one such as Downloads
-also works, because unrecognised files are ignored.
+If the marketplace delivers to an SFTP server elsewhere, trackside can fetch
+from it. Pin the server's host key, which `ssh-keyscan -p PORT HOST` prints:
+
+```bash
+INBOX_SFTP=sftp://rdm@sftp.example.com:2222/upload
+INBOX_SFTP_PASSWORD=...
+INBOX_SFTP_HOST_KEY="ssh-ed25519 AAAA..."
+```
+
+For SFTP delivery to the machine trackside runs on, or files you download by
+hand, point `INBOX_DIR` at the folder instead. A dedicated folder is best,
+but a busy one such as Downloads also works, because unrecognised files are
+ignored.
 
 ### 3. Run it
 
@@ -331,6 +341,9 @@ precedence over it.
 | `INBOX_BUCKET` | | `gs://bucket/prefix` or `s3://bucket/prefix` to import delivered files from |
 | `INBOX_ACCESS_KEY`, `INBOX_SECRET_KEY` | | HMAC (Google Cloud Storage) or access keys (S3) for `INBOX_BUCKET` |
 | `INBOX_ENDPOINT` | provider default | Override the bucket's S3 endpoint |
+| `INBOX_SFTP` | | `sftp://user@host[:port]/path` to import delivered files from |
+| `INBOX_SFTP_PASSWORD`, `INBOX_SFTP_KEY` | | Password and/or private key (OpenSSH or PEM) for `INBOX_SFTP` |
+| `INBOX_SFTP_HOST_KEY` | | The SFTP server's public key, as `ssh-keyscan` prints it. Required. |
 | `INBOX_INTERVAL` | `15m` | How often to check the inbox |
 | `NRE_LDBWS_TOKEN` | | Darwin Lite developer token (see [Darwin Lite](#alternative-darwin-lite)). Ignored when the Darwin Push Port is configured. |
 | `NRE_LDBWS_URL` | `https://lite.realtime.nationalrail.co.uk/OpenLDBWS/ldb12.asmx` | Darwin Lite endpoint |
