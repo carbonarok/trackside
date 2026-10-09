@@ -1,4 +1,12 @@
 /trackside
 *.gz
-.env
 .claude/
+.DS_Store
+
+# Secrets: credentials live in .env, which never belongs in git
+.env
+.env.*
+!.env.example
+*.p8
+*.p12
+*.pem

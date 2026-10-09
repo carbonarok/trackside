@@ -17,11 +17,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Every setting in .env reaches the server: feed credentials, inbox,
+    # APNs and API_KEY alike. The two below win over .env, so the database
+    # and the port mapping stay right.
+    env_file:
+      - path: .env
+        required: false
     environment:
       DATABASE_URL: postgres://trackside:trackside@db:5432/trackside?sslmode=disable
-      NR_USERNAME: ${NR_USERNAME:-}
-      NR_PASSWORD: ${NR_PASSWORD:-}
-      NR_CLIENT_ID: ${NR_CLIENT_ID:-}
+      LISTEN_ADDR: ":8080"
     ports:
       - "8080:8080"
     restart: unless-stopped
