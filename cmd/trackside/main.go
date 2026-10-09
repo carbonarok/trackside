@@ -24,6 +24,7 @@ import (
 	"github.com/carbonarok/trackside/internal/activity"
 	"github.com/carbonarok/trackside/internal/api"
 	"github.com/carbonarok/trackside/internal/apns"
+	"github.com/carbonarok/trackside/internal/auth"
 	"github.com/carbonarok/trackside/internal/compat"
 	"github.com/carbonarok/trackside/internal/corpus"
 	"github.com/carbonarok/trackside/internal/darwin"
@@ -52,10 +53,10 @@ Usage:
   trackside import-smart [FILE]       load SMART TD berth data (downloads if no FILE)
   trackside import-darwin-ref FILE    load a Darwin reference data file (*_ref_v*.xml[.gz])
   trackside import-naptan [FILE]      load station coordinates from NaPTAN (downloads if no FILE)
-  trackside import-inbox              import new files from INBOX_DIR / INBOX_BUCKET once
+  trackside import-inbox              import new files from the inbox (INBOX_*) once
   trackside refresh-services          re-resolve services for the current window
 
-Configuration is read from the environment; see README.md.
+Configuration is read from the environment and .env; see README.md.
 `
 
 func main() {
@@ -144,7 +145,7 @@ func run(ctx context.Context, cmd string, args []string) error {
 			return err
 		}
 		if len(importers) == 0 {
-			return errors.New("set INBOX_DIR or INBOX_BUCKET")
+			return errors.New("set INBOX_DIR, INBOX_BUCKET or INBOX_SFTP")
 		}
 		for _, im := range importers {
 			if err := im.Poll(ctx); err != nil {
@@ -561,9 +562,13 @@ func serve(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config) error {
 		slog.Info("Darwin not configured (RDM_DARWIN_* or NRE_LDBWS_TOKEN); using TRUST-based estimates only")
 	}
 
+	keys := auth.Keys(os.Getenv("API_KEY"))
+	if len(keys) > 0 {
+		slog.Info("API key required", "keys", len(keys))
+	}
 	srv := &http.Server{
 		Addr:              env("LISTEN_ADDR", ":8080"),
-		Handler:           logRequests(compress(mux)),
+		Handler:           logRequests(auth.Require(keys, compress(mux))),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	go func() {
@@ -670,8 +675,8 @@ func every(ctx context.Context, interval time.Duration, name string, fn func(con
 }
 
 // compress gzips responses that aren't already (the shared cache
-// compresses its own once). Everything leaves through the home connection
-// the Cloudflare tunnel runs over, so this decides how many people it can
+// compresses its own once). An instance served from a home connection is
+// limited by its upload speed, so this decides how many people it can
 // serve. The live socket is left alone.
 func compress(h http.Handler) http.Handler {
 	gz := gzhttp.GzipHandler(h)

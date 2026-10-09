@@ -11,11 +11,22 @@ info:
     `2026-10-06T08:07:00+01:00`. Locations are given by CRS code (`CLJ`) or
     TIPLOC (`CLPHMJN`); a CRS covers every TIPLOC at the station.
 
+    An instance started with `API_KEY` set needs that key on every request
+    except `/healthz`: as `Authorization: Bearer <key>`, or as the password
+    of HTTP Basic auth with any user name. Without `API_KEY` the server is
+    open.
+
     Contains public sector information licensed under the Open Government
     Licence v3.0. Darwin data powered by National Rail Enquiries.
   license:
     name: AGPL-3.0-only
     identifier: AGPL-3.0-only
+
+# Each instance chooses: open (the empty requirement), or keyed.
+security:
+  - {}
+  - apiKey: []
+  - basic: []
 
 paths:
   /v1/locations:
@@ -343,6 +354,7 @@ paths:
     get:
       summary: Liveness check
       operationId: health
+      security: []
       responses:
         "200":
           description: The server and its database are up.
@@ -353,6 +365,15 @@ paths:
           description: The database is unavailable.
 
 components:
+  securitySchemes:
+    apiKey:
+      type: http
+      scheme: bearer
+      description: The server's `API_KEY`.
+    basic:
+      type: http
+      scheme: basic
+      description: Any user name, with the server's `API_KEY` as the password.
   parameters:
     LocationCode:
       name: code
