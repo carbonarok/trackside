@@ -84,9 +84,15 @@ func TestHistory(t *testing.T) {
 	if err := arch.Run(ctx); err != nil {
 		t.Fatal(err)
 	}
-	// Remove the live data so answers must come from history.
-	if _, err := pool.Exec(ctx, `DELETE FROM services WHERE run_date = '2026-10-06'`); err != nil {
+	// A week on, pruning removes the live data, so answers must come from history.
+	weekOn := func() time.Time { return time.Date(2026, 10, 14, 5, 0, 0, 0, ukrail.London) }
+	pruner := &history.Archiver{Pool: pool, Store: store, LiveKeep: 7 * 24 * time.Hour, Now: weekOn}
+	if err := pruner.Run(ctx); err != nil {
 		t.Fatal(err)
+	}
+	pool.QueryRow(ctx, `SELECT count(*) FROM services WHERE run_date = '2026-10-06'`).Scan(&n)
+	if n != 0 {
+		t.Fatalf("%d live services left for 6 October after pruning", n)
 	}
 	check("history")
 

@@ -294,9 +294,16 @@ func inboxImporters(pool *pgxpool.Pool) ([]*inbox.Importer, error) {
 }
 
 // historyKeep reads HISTORY_DAYS (default 400; 0 keeps history forever).
-func historyKeep() time.Duration {
-	days := 400
-	if v := os.Getenv("HISTORY_DAYS"); v != "" {
+func historyKeep() time.Duration { return envDays("HISTORY_DAYS", 400) }
+
+// liveKeep reads LIVE_DAYS (default 7; 0 keeps the live tables forever).
+func liveKeep() time.Duration { return envDays("LIVE_DAYS", 7) }
+
+// envDays reads a whole number of days from name, or def if it is unset or
+// not a number of days.
+func envDays(name string, def int) time.Duration {
+	days := def
+	if v := os.Getenv(name); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
 			days = n
 		}
@@ -455,7 +462,7 @@ func serve(ctx context.Context, pool *pgxpool.Pool, nr feeds.Config) error {
 	go every(ctx, time.Hour, "refresh services", func(ctx context.Context) error {
 		return schedule.RefreshServices(ctx, pool)
 	})
-	archiver := &history.Archiver{Pool: pool, Store: store, Keep: historyKeep()}
+	archiver := &history.Archiver{Pool: pool, Store: store, Keep: historyKeep(), LiveKeep: liveKeep()}
 	go every(ctx, time.Hour, "archive history", archiver.Run)
 	if nr.Username != "" {
 		go every(ctx, time.Hour, "daily schedule update", func(ctx context.Context) error {
