@@ -136,6 +136,7 @@ precedence over it. [`.env.example`](.env.example) lists them with comments.
 | `NRE_LDBWS_TOKEN` | | Darwin Lite developer token (see [Darwin Lite](docs/data-feeds.md#darwin-lite)). Ignored when the Darwin Push Port is configured. |
 | `NRE_LDBWS_URL` | `https://lite.realtime.nationalrail.co.uk/OpenLDBWS/ldb12.asmx` | Darwin Lite endpoint |
 | `HISTORY_DAYS` | `400` | How many days of actual running to keep. `0` keeps it forever. |
+| `LIVE_DAYS` | `7` | How many past days the live tables keep (TRUST, Darwin and Train Describer detail, behind train pages and search). Each day is archived to history before it goes. At least 3; `0` keeps it forever. |
 | `MAP_TILE_URL` | OpenStreetMap | Map tiles for the live map, as `https://.../{z}/{x}/{y}.png`. OpenStreetMap's own servers are fine for personal use; a public instance should use its own tiles or a tile provider. |
 | `APNS_KEY_FILE` or `APNS_KEY` | | The APNs auth key (.p8) from the Apple Developer portal, as a file path or its contents (`\n` may stand for line breaks). Turns on [Live Activity pushes](docs/ios-live-activities.md). |
 | `APNS_KEY_ID`, `APNS_TEAM_ID` | | The key's ID and your Apple team ID |

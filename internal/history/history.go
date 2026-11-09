@@ -23,6 +23,11 @@ type Archiver struct {
 	Store *timetable.Store
 	// Keep is how long history is kept; 0 keeps it forever.
 	Keep time.Duration
+	// LiveKeep is how long the live tables (services, with their TRUST and
+	// Darwin rows, Darwin associations and VSTP schedules) keep a past run
+	// date; 0 keeps them forever. A date is archived before its live rows go,
+	// and the window is never shorter than the days Run archives.
+	LiveKeep time.Duration
 	// Now is the clock; tests override it.
 	Now func() time.Time
 }
@@ -38,18 +43,26 @@ func (a *Archiver) now() time.Time {
 // late in the evening run into the small hours of the next day.
 const archiveAfter = 4 * time.Hour
 
+// archiveDays is how many finished days back Run looks for dates to archive.
+const archiveDays = 3
+
+// archivedKey is the feed_state key marking a run date as archived.
+func archivedKey(d time.Time) string {
+	return "history_archived:" + d.Format(time.DateOnly)
+}
+
 // Run archives any recent run dates that have finished and not been
-// archived yet, then drops history older than Keep. It is safe to run
-// repeatedly.
+// archived yet, drops history older than Keep, then prunes the live tables
+// past LiveKeep. It is safe to run repeatedly.
 func (a *Archiver) Run(ctx context.Context) error {
 	now := a.now().In(ukrail.London)
 	today := ukrail.DateOf(now)
-	for back := 3; back >= 1; back-- {
+	for back := archiveDays; back >= 1; back-- {
 		d := today.AddDate(0, 0, -back)
 		if back == 1 && now.Sub(ukrail.AtRunDate(today, 0)) < archiveAfter {
 			continue // yesterday's late trains may still be running
 		}
-		key := "history_archived:" + d.Format(time.DateOnly)
+		key := archivedKey(d)
 		done, err := db.GetState(ctx, a.Pool, key)
 		if err != nil {
 			return err
@@ -70,6 +83,11 @@ func (a *Archiver) Run(ctx context.Context) error {
 		cutoff := today.Add(-a.Keep)
 		if _, err := a.Pool.Exec(ctx, `DELETE FROM history_stops WHERE run_date < $1`, cutoff); err != nil {
 			return err
+		}
+	}
+	if a.LiveKeep > 0 {
+		if err := a.pruneLive(ctx, today, now); err != nil {
+			return fmt.Errorf("prune live tables: %w", err)
 		}
 	}
 	return nil

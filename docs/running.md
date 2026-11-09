@@ -80,6 +80,11 @@ Once `serve` is running:
   that. They're retried every 10 minutes until stations exist to attach them
   to.
 - **History** older than `HISTORY_DAYS` is deleted hourly.
+- **Live data** older than `LIVE_DAYS` (default 7) is deleted hourly: past
+  services with their TRUST events and Darwin forecasts, Darwin associations
+  and finished VSTP schedules. A day is archived to history first, so Delay
+  Repay and punctuality still answer for it, but its train page and search
+  results are gone.
 
 The logs show `subscribed topic=...` for each Network Rail feed and
 `consuming topic=...` for each Kafka feed.
@@ -187,11 +192,12 @@ Measured on one instance with every feed configured:
 | | |
 |---|---|
 | Database after the first import | about 1.5 GB |
-| History growth | about 30–40 MB a day, so about 12–16 GB at the default `HISTORY_DAYS=400` |
+| History growth | about 55–60 MB a day, so about 23 GB at the default `HISTORY_DAYS=400` |
+| Live tables | about 170 MB for each past day kept, so about 1–2 GB at the default `LIVE_DAYS=7` |
 | Memory | about 125 MB steady, about 220 MB peak during an import |
 | CPU | about 5% of a core for trackside and 17% for Postgres following all live feeds |
 
-Give Postgres at least 20–30 GB of disk if you keep the default history, or
+Give Postgres at least 30 GB of disk if you keep the default history, or
 lower `HISTORY_DAYS`.
 
 Boards, train pages and the map are cached and shared between viewers until
