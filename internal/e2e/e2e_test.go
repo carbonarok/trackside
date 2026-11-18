@@ -172,6 +172,10 @@ func TestPipeline(t *testing.T) {
 		if got := uids(b); got != "W10001" {
 			t.Fatalf("services to WIM = %s (the W10004 overlay skips Wimbledon)", got)
 		}
+		get(t, srv, "/v1/locations/WOK/arrivals?at=2026-10-06T08:30&window=60&from=WIM", &b)
+		if got := uids(b); got != "W10001,W10005" {
+			t.Fatalf("arrivals from WIM = %s (W10005 starts there; the W10004 overlay skips it)", got)
+		}
 	})
 
 	t.Run("search trains by headcode and UID", func(t *testing.T) {

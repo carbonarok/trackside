@@ -228,6 +228,28 @@ func (st *Store) Board(ctx context.Context, q BoardQuery) ([]BoardEntry, error) 
 	}
 	const layout = "2006-01-02 15:04:05"
 	from, to := q.From.In(ukrail.London), q.To.In(ukrail.London)
+	args := []any{ukrail.DateOf(from), ukrail.DateOf(to), q.TIPLOCs, from.Format(layout), to.Format(layout)}
+	// A "trains to X" board would otherwise load every train in the window,
+	// stops and all, to keep the few that go to X. callsAt below still
+	// decides; this only skips loading trains it would reject.
+	calls := ""
+	if len(q.Calling) > 0 {
+		calls = `
+		  AND EXISTS (
+		      SELECT 1 FROM schedule_locations c
+		      WHERE c.schedule_id = sv.schedule_id
+		        AND c.tiploc = ANY($6)
+		        AND c.seq > sl.seq AND c.gbtt_arr IS NOT NULL)`
+		if q.Arrivals {
+			calls = `
+		  AND EXISTS (
+		      SELECT 1 FROM schedule_locations c
+		      WHERE c.schedule_id = sv.schedule_id
+		        AND c.tiploc = ANY($6)
+		        AND c.seq < sl.seq AND c.gbtt_dep IS NOT NULL)`
+		}
+		args = append(args, q.Calling)
+	}
 	rows, err := st.Pool.Query(ctx, `
 		SELECT sv.id, sl.seq, `+timeCol+` AS t
 		FROM services sv
@@ -236,8 +258,8 @@ func (st *Store) Board(ctx context.Context, q BoardQuery) ([]BoardEntry, error) 
 		  AND sl.tiploc = ANY($3)
 		  AND `+timeCol+` IS NOT NULL
 		  AND sv.run_date + make_interval(secs => `+timeCol+`) >= $4::timestamp
-		  AND sv.run_date + make_interval(secs => `+timeCol+`) < $5::timestamp`,
-		ukrail.DateOf(from), ukrail.DateOf(to), q.TIPLOCs, from.Format(layout), to.Format(layout))
+		  AND sv.run_date + make_interval(secs => `+timeCol+`) < $5::timestamp`+calls,
+		args...)
 	if err != nil {
 		return nil, err
 	}
