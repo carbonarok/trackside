@@ -79,8 +79,8 @@ type Forecast struct {
 	Src       string `xml:"src,attr"`
 }
 
-// Plat is a platform forecast. Suppressed platforms must not be shown to the
-// public.
+// Plat is a platform forecast. A suppressed one isn't being shown on the
+// station's screens yet.
 type Plat struct {
 	Number     string `xml:",chardata"`
 	PlatSup    bool   `xml:"platsup,attr"`
@@ -88,7 +88,7 @@ type Plat struct {
 	Conf       bool   `xml:"conf,attr"`
 }
 
-// Suppressed reports whether the platform must be hidden.
+// Suppressed reports whether the station's screens are hiding the platform.
 func (p *Plat) Suppressed() bool { return p.PlatSup || p.CISPlatSup }
 
 // Reason is a late-running or cancellation reason code.

@@ -21,3 +21,33 @@ func TestPlatformChanged(t *testing.T) {
 		}
 	}
 }
+
+// At Paddington, Darwin had the train's platform hours ahead but kept it
+// off the station's screens, showed it once announced, then hid it again
+// when a screen lost the train. The plan never changed, so the platform
+// shouldn't either: it was showing the booked one whenever it was hidden.
+func TestUnannouncedPlatformStands(t *testing.T) {
+	stop := func(suppressed bool) Stop {
+		s := Service{Stops: []Stop{{
+			Location: Location{TIPLOC: "PADTON"},
+			Platform: "9",
+			Darwin:   &DarwinForecast{Platform: "1", PlatformSuppressed: suppressed, PlatformConfirmed: true},
+		}}}
+		s.applyDarwinActuals()
+		return s.Stops[0]
+	}
+
+	for _, suppressed := range []bool{true, false, true} {
+		p := stop(suppressed)
+		if p.ActualPlatform != "1" {
+			t.Errorf("suppressed=%v: platform %q, want Darwin's 1 rather than the booked 9", suppressed, p.ActualPlatform)
+		}
+		if p.PlatformSuppressed != suppressed {
+			t.Errorf("suppressed=%v: flagged %v", suppressed, p.PlatformSuppressed)
+		}
+		// Confirmed means on the screens, which a hidden platform isn't.
+		if p.PlatformConfirmed == suppressed {
+			t.Errorf("suppressed=%v: confirmed %v", suppressed, p.PlatformConfirmed)
+		}
+	}
+}

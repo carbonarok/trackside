@@ -34,7 +34,7 @@ export function PlatformSign({ stop, lead = false, introduce = false, delay = 0 
           : stop.platform?.confirmed
             ? 'Confirmed'
             : stop.platform?.suppressed
-              ? 'Booked platform. The station hasn’t announced it yet, so it may change.'
+              ? 'Expected platform. The station hasn’t announced it yet.'
               : 'Booked platform'
       }
     >
@@ -43,7 +43,7 @@ export function PlatformSign({ stop, lead = false, introduce = false, delay = 0 
         tiles={lead}
         introduce={introduce}
         delay={delay}
-        label={`Platform ${p}${changed ? `, changed from ${stop.platform?.planned}` : stop.platform?.confirmed ? '' : ', booked'}`}
+        label={`Platform ${p}${changed ? `, changed from ${stop.platform?.planned}` : stop.platform?.confirmed ? '' : stop.platform?.suppressed ? ', not yet announced' : ', booked'}`}
       />
     </span>
   )

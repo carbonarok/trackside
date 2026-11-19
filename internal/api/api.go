@@ -245,8 +245,9 @@ type Times struct {
 	Cancelled bool `json:"cancelled,omitempty"`
 }
 
-// Platform is the booked and live platform. While Darwin has the platform
-// suppressed, its live platform is held back and only the booked one shows.
+// Platform is the booked and live platform. Suppressed is set while the
+// live platform isn't on the station's screens yet; it's still the
+// platform the train is planned to use.
 type Platform struct {
 	Planned    string `json:"planned,omitempty"`
 	Actual     string `json:"actual,omitempty"`

@@ -94,15 +94,18 @@ func (s *Service) applyDarwinActuals() {
 		}
 		p.ArrCancelled = p.ArrCancelled || d.ArrCancelled
 		p.DepCancelled = p.DepCancelled || d.DepCancelled
-		// A suppressed platform is one National Rail isn't showing passengers
-		// yet, usually at big termini so people don't crowd the platform
-		// before it's announced. Keep Darwin's value back, but the booked
-		// platform from the timetable is public and still stands.
-		if d.Platform != "" && !d.PlatformSuppressed {
+		// Darwin's platform is the plan, announced or not. A suppressed one
+		// isn't on the station's screens yet: big termini such as Paddington
+		// hold platforms back until a few minutes before departure, and a
+		// screen that loses a train suppresses it again. The plan hasn't
+		// changed either time, so the platform stands and is flagged as
+		// not yet announced, rather than falling back to the booked one
+		// and flipping each time the screens do.
+		if d.Platform != "" {
 			p.ActualPlatform = d.Platform
-			p.PlatformConfirmed = d.PlatformConfirmed
+			p.PlatformConfirmed = d.PlatformConfirmed && !d.PlatformSuppressed
 		}
-		p.PlatformSuppressed = d.PlatformSuppressed
+		p.PlatformSuppressed = d.Platform != "" && d.PlatformSuppressed
 	}
 }
 

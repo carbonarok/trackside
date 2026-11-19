@@ -114,7 +114,8 @@ type Stop struct {
 	TerminatesHere bool // last served stop after a part cancellation
 	ArrDelayed     bool // late by an unknown amount
 	DepDelayed     bool
-	// Platform display state. Darwin's platform is not used while suppressed.
+	// Platform display state. Suppressed: Darwin has the live platform, but
+	// the station isn't showing it yet.
 	PlatformConfirmed  bool
 	PlatformSuppressed bool
 	// AtPlatform means the train has arrived here and not yet departed.
